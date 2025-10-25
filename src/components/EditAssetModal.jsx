@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 export default function EditAssetModal({ asset, onClose, onSave }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
+  const [symbol, setSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [currentPrice, setCurrentPrice] = useState('')
@@ -15,6 +16,7 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
     if (asset) {
       setName(asset.name || '')
       setCategory(asset.category || '')
+      setSymbol(asset.symbol || '')
       setQuantity(asset.quantity?.toString() || '0')
       setPurchasePrice(asset.purchase_price?.toString() || '0')
       setCurrentPrice(asset.current_price?.toString() || '0')
@@ -78,6 +80,7 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         .update({
           name: name.trim(),
           category: category.trim(),
+          symbol: symbol.trim() || null,
           quantity: numericQuantity,
           purchase_price: numericPurchasePrice,
           current_price: numericCurrentPrice,
@@ -94,6 +97,7 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         ...asset,
         name: name.trim(),
         category: category.trim(),
+        symbol: symbol.trim() || null,
         quantity: numericQuantity,
         purchase_price: numericPurchasePrice,
         current_price: numericCurrentPrice,
@@ -151,6 +155,22 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
               placeholder="ex: Actions, Crypto, Immobilier"
               className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Symbole Yahoo Finance <span className="text-gray-500 text-xs">(optionnel)</span>
+            </label>
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="ex: AAPL, MSFT, BTC-USD"
+              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              📈 Pour mise à jour automatique du prix
+            </p>
           </div>
 
           <div>

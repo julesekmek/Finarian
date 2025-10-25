@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 export default function AddAssetForm({ userId, onAssetAdded }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
+  const [symbol, setSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [currentPrice, setCurrentPrice] = useState('')
@@ -45,6 +46,7 @@ export default function AddAssetForm({ userId, onAssetAdded }) {
       const { error: insertError } = await supabase.from('assets').insert({
         name: name.trim(),
         category: category.trim(),
+        symbol: symbol.trim() || null,
         quantity: numericQuantity,
         purchase_price: numericPurchasePrice,
         current_price: numericCurrentPrice,
@@ -56,6 +58,7 @@ export default function AddAssetForm({ userId, onAssetAdded }) {
       // Reset form
       setName('')
       setCategory('')
+      setSymbol('')
       setQuantity('')
       setPurchasePrice('')
       setCurrentPrice('')
@@ -99,6 +102,22 @@ export default function AddAssetForm({ userId, onAssetAdded }) {
             placeholder="e.g., Cash, Stocks, Real Estate"
             className="border rounded-lg p-2 w-full focus:ring focus:ring-blue-200 focus:outline-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Symbole Yahoo Finance <span className="text-gray-500 text-xs">(optionnel)</span>
+          </label>
+          <input
+            type="text"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            placeholder="e.g., AAPL, MSFT, BTC-USD, ^FCHI"
+            className="border rounded-lg p-2 w-full focus:ring focus:ring-blue-200 focus:outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            📈 Si renseigné, le prix pourra être mis à jour automatiquement
+          </p>
         </div>
 
         <div>

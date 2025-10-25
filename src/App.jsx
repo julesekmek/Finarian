@@ -28,25 +28,31 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Fetch assets to calculate total wealth
-  useEffect(() => {
+  // Function to fetch assets - can be called from Header after price update
+  const fetchAssets = async () => {
     if (!user) {
       setAssets([])
       return
     }
 
-    const fetchAssets = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('assets')
-          .select('*')
-          .eq('user_id', user.id)
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', user.id)
 
-        if (error) throw error
-        setAssets(data || [])
-      } catch (error) {
-        console.error('Error fetching assets:', error)
-      }
+      if (error) throw error
+      setAssets(data || [])
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+    }
+  }
+
+  // Fetch assets to calculate total wealth
+  useEffect(() => {
+    if (!user) {
+      setAssets([])
+      return
     }
 
     fetchAssets()
@@ -86,7 +92,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Header assets={assets} userEmail={user.email} />
+        <Header 
+          assets={assets} 
+          userEmail={user.email} 
+          onPricesUpdated={fetchAssets}
+        />
         
         <div className="space-y-6">
           <AssetList userId={user.id} />

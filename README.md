@@ -175,37 +175,43 @@ The app uses EUR (€) with French formatting (`fr-FR`). To change to USD or oth
 ✅ Track unrealized gains and losses per asset  
 ✅ Calculate total gain/loss with percentage  
 ✅ Increment/decrement asset quantities  
-✅ Delete assets with confirmation  
+✅ Edit and delete assets with confirmation  
+✅ **🔄 Automatic price updates** via Yahoo Finance API  
+✅ Supabase Edge Function for secure API calls  
+✅ Yahoo Finance symbol support (stocks, crypto, indices, forex)  
 ✅ Realtime synchronization across devices  
 ✅ Responsive design for mobile and desktop  
 ✅ Clean, modern UI with TailwindCSS  
 
+## 🔄 Automatic Price Updates (NEW!)
+
+Finarian now supports **automatic price updates** via Yahoo Finance! 
+
+### How to Use
+
+1. **Add a Yahoo Finance symbol** when creating or editing an asset
+   - Examples: `AAPL`, `MSFT`, `BTC-USD`, `^FCHI`, `EURUSD=X`
+2. **Click "🔄 Mettre à jour les prix"** in the dashboard header
+3. Watch your portfolio values update in real-time!
+
+### Technical Details
+
+- **Supabase Edge Function** securely fetches prices server-side
+- **Yahoo Finance API** provides real-time market data
+- **No API key required** - fully functional out of the box
+- Supports stocks, crypto, indices, and forex
+
+📖 **Full documentation**: See [AUTOMATIC_PRICE_UPDATE.md](./AUTOMATIC_PRICE_UPDATE.md)
+
 ## Next Steps (Future Enhancements)
 
-- 🔄 **Automatic Price Updates**: Integrate external APIs (Yahoo Finance, EODHD) to update current prices automatically
 - 📊 **Charts and Visualizations**: Add portfolio allocation pie charts and gain/loss trend graphs
 - 🏷️ **Asset Filtering**: Filter assets by category
-- ✏️ **Edit Asset Details**: Update asset name, category, and prices directly
 - 📈 **Historical Tracking**: Track price history and portfolio value over time
 - 💱 **Multi-Currency Support**: Support multiple currencies with conversion rates
 - 📄 **Export Data**: Export portfolio to CSV or PDF
 - 🔔 **Price Alerts**: Set alerts for price targets or percentage changes
-
-### Preparing for External API Integration
-
-The project structure is ready to integrate external APIs for automatic price updates. A placeholder file has been created at `src/lib/priceAPI.js` for this purpose.
-
-**Recommended APIs:**
-- **Yahoo Finance API**: Free tier available for stock prices
-- **EODHD (End of Day Historical Data)**: Comprehensive financial data API
-- **Alpha Vantage**: Free API for stocks, forex, and crypto
-
-**Implementation Approach:**
-1. Add API key to `.env` file
-2. Implement fetch functions in `src/lib/priceAPI.js`
-3. Add a "Refresh Prices" button in the UI
-4. Update `current_price` in Supabase when fetching new data
-5. Consider rate limiting and caching to avoid API quota issues
+- ⏰ **Scheduled Updates**: Auto-update prices daily via cron job
 
 ---
 

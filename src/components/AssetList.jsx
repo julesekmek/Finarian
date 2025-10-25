@@ -171,9 +171,16 @@ export default function AssetList({ userId }) {
                   <h3 className="font-semibold text-gray-800 text-lg">
                     {asset.name}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {asset.category}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm text-gray-500">
+                      {asset.category}
+                    </p>
+                    {asset.symbol && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono">
+                        {asset.symbol}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button

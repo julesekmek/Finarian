@@ -1,9 +1,44 @@
+import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { callUpdatePrices } from '../lib/updatePrices'
 
-export default function Header({ assets, userEmail }) {
+export default function Header({ assets, userEmail, onPricesUpdated }) {
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState(null)
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) console.error('Error signing out:', error)
+  }
+
+  const handleUpdatePrices = async () => {
+    setIsUpdating(true)
+    setUpdateMessage(null)
+
+    const result = await callUpdatePrices()
+
+    if (result.success) {
+      const { updated, failed } = result.data
+      setUpdateMessage({
+        type: 'success',
+        text: `✓ ${updated} prix mis à jour${failed > 0 ? `, ${failed} échec(s)` : ''}`
+      })
+      
+      // Refresh assets after update
+      if (onPricesUpdated) {
+        await onPricesUpdated()
+      }
+    } else {
+      setUpdateMessage({
+        type: 'error',
+        text: `✗ Erreur: ${result.error}`
+      })
+    }
+
+    setIsUpdating(false)
+
+    // Clear message after 5 seconds
+    setTimeout(() => setUpdateMessage(null), 5000)
   }
 
   // Calculate totals from assets
@@ -36,13 +71,39 @@ export default function Header({ assets, userEmail }) {
     <header className="bg-white rounded-2xl shadow-sm p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-gray-800">Finarian</h1>
-        <button
-          onClick={handleSignOut}
-          className="text-sm text-gray-600 hover:text-gray-800 font-medium"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleUpdatePrices}
+            disabled={isUpdating}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+              isUpdating
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+            }`}
+          >
+            <span className={isUpdating ? 'animate-spin' : ''}>
+              🔄
+            </span>
+            {isUpdating ? 'Mise à jour...' : 'Mettre à jour les prix'}
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
+
+      {updateMessage && (
+        <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
+          updateMessage.type === 'success' 
+            ? 'bg-green-50 text-green-700 border border-green-200' 
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {updateMessage.text}
+        </div>
+      )}
       
       <div className="space-y-4">
         <div>
