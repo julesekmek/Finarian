@@ -5,23 +5,28 @@ import { supabase } from './supabaseClient'
  * Returns daily snapshots of total portfolio value
  * 
  * @param {string} userId - User ID
- * @param {number} days - Number of days to fetch (7, 30, or 90)
+ * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Array>} Array of {date, value} objects
  */
 export async function getPortfolioHistory(userId, days = 30) {
   try {
-    // Calculate the start date
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
-    const startDateStr = startDate.toISOString().split('T')[0]
-
-    // Fetch asset history for the period
-    const { data: historyData, error: historyError } = await supabase
+    // Build the query
+    let query = supabase
       .from('asset_history')
       .select('date, price, asset_id')
       .eq('user_id', userId)
-      .gte('date', startDateStr)
       .order('date', { ascending: true })
+
+    // If days is not 'all', filter by date
+    if (days !== 'all') {
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+      const startDateStr = startDate.toISOString().split('T')[0]
+      query = query.gte('date', startDateStr)
+    }
+
+    // Fetch asset history for the period
+    const { data: historyData, error: historyError } = await query
 
     if (historyError) throw historyError
 

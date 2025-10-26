@@ -1,11 +1,13 @@
 /**
- * PortfolioChart component
- * Displays interactive chart of portfolio value evolution
- * Shows performance metrics and allows period selection
+ * PortfolioChart component - Modern portfolio evolution chart
+ * Beautiful dark mode chart with smooth animations
  */
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
 import { getPortfolioHistory, calculatePerformanceMetrics } from '../lib/portfolioHistory'
 import { formatCurrency, formatShortDate } from '../lib/utils/formatters'
 import { DEFAULT_PERIOD, CHART_PERIODS } from '../lib/utils/constants'
@@ -16,6 +18,49 @@ export default function PortfolioChart({ userId }) {
   const [metrics, setMetrics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [totalInvested, setTotalInvested] = useState(0)
+
+  // Fetch total invested amount (real investment)
+  useEffect(() => {
+    if (!userId) return
+
+    async function fetchTotalInvested() {
+      try {
+        const { data: assets, error } = await supabase
+          .from('assets')
+          .select('quantity, purchase_price')
+          .eq('user_id', userId)
+
+        if (error) throw error
+
+        const invested = assets.reduce((sum, asset) => {
+          return sum + (parseFloat(asset.quantity) * parseFloat(asset.purchase_price))
+        }, 0)
+
+        setTotalInvested(invested)
+      } catch (err) {
+        console.error('Error calculating total invested:', err)
+      }
+    }
+
+    fetchTotalInvested()
+
+    // Realtime subscription to update when assets change
+    const channel = supabase
+      .channel(`portfolio_invested_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${userId}` },
+        () => {
+          fetchTotalInvested()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
 
   // Fetch portfolio history when period or userId changes
   useEffect(() => {
@@ -29,7 +74,6 @@ export default function PortfolioChart({ userId }) {
         const data = await getPortfolioHistory(userId, period)
         setHistory(data)
         
-        // Calculate performance metrics
         const performanceMetrics = calculatePerformanceMetrics(data)
         setMetrics(performanceMetrics)
       } catch (err) {
@@ -54,9 +98,9 @@ export default function PortfolioChart({ userId }) {
         year: 'numeric'
       })
       return (
-        <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600 mb-1">{formattedDate}</p>
-          <p className="text-lg font-semibold text-gray-900">
+        <div className="bg-dark-card border border-border-subtle px-4 py-3 rounded-xl shadow-card">
+          <p className="text-sm text-text-muted mb-1">{formattedDate}</p>
+          <p className="text-lg font-semibold text-text-primary">
             {formatCurrency(data.value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </p>
         </div>
@@ -68,162 +112,228 @@ export default function PortfolioChart({ userId }) {
   // Render loading state
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card"
+      >
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-gray-100 rounded"></div>
+          <div className="h-6 bg-dark-hover rounded-lg w-1/4 mb-6"></div>
+          <div className="h-64 bg-dark-hover rounded-xl"></div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // Render error state
   if (error) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="text-center py-8">
-          <p className="text-red-600">{error}</p>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card"
+      >
+        <div className="text-center py-12">
+          <Activity className="w-12 h-12 text-accent-red mx-auto mb-4" />
+          <p className="text-accent-red">{error}</p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   // Render empty state
   if (!history || history.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          📊 Évolution du patrimoine
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card"
+      >
+        <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <Activity className="w-6 h-6 text-accent-primary" />
+          Évolution du patrimoine
         </h2>
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-lg mb-2">Aucune donnée historique disponible</p>
-          <p className="text-sm">
-            Mettez à jour vos prix pour commencer à suivre l'évolution de votre patrimoine
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-dark-hover rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-text-muted" />
+          </div>
+          <p className="text-lg text-text-secondary mb-2">Aucune donnée historique</p>
+          <p className="text-sm text-text-muted">
+            Mettez à jour vos prix pour commencer à suivre l'évolution
           </p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
-  // Determine color based on trend
+  // Determine color and gradient based on trend
   const getTrendColor = () => {
-    if (!metrics) return '#6366f1'
-    if (metrics.trend === 'positive') return '#10b981'
-    if (metrics.trend === 'negative') return '#ef4444'
-    return '#6366f1'
+    if (!metrics) return { stroke: '#3B82F6', fill: 'url(#colorBlue)' }
+    if (metrics.trend === 'positive') return { stroke: '#F1C086', fill: 'url(#colorPrimary)' }
+    if (metrics.trend === 'negative') return { stroke: '#EF4444', fill: 'url(#colorRed)' }
+    return { stroke: '#3B82F6', fill: 'url(#colorBlue)' }
   }
 
-  const trendColor = getTrendColor()
+  const { stroke, fill } = getTrendColor()
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card"
+    >
       {/* Header with title and period selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 sm:mb-0">
-          📊 Évolution du patrimoine
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
+          <Activity className="w-6 h-6 text-accent-primary" />
+          Évolution du patrimoine
         </h2>
         
-          {/* Period selector */}
-          <div className="flex gap-2">
-            {Object.values(CHART_PERIODS).map((days) => (
-              <button
-                key={days}
-                onClick={() => setPeriod(days)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  period === days
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {days}J
-              </button>
-            ))}
-          </div>
+            {/* Period selector */}
+            <div className="flex gap-2 flex-wrap">
+              {Object.entries(CHART_PERIODS).map(([key, days]) => (
+                <button
+                  key={key}
+                  onClick={() => setPeriod(days)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    period === days
+                      ? 'bg-accent-primary text-white shadow-glow-primary'
+                      : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80 hover:text-text-primary'
+                  }`}
+                >
+                  {days === 'all' ? 'Tout' : `${days}J`}
+                </button>
+              ))}
+            </div>
       </div>
 
       {/* Performance metrics */}
       {metrics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Valeur actuelle</p>
-            <p className="text-xl font-semibold text-gray-900">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-dark-hover rounded-xl p-4"
+          >
+            <p className="text-xs text-text-muted mb-1 uppercase tracking-wide">Valeur actuelle</p>
+            <p className="text-xl font-bold text-text-primary">
               {formatCurrency(metrics.currentValue)}
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Valeur initiale</p>
-            <p className="text-xl font-semibold text-gray-900">
-              {formatCurrency(metrics.startValue)}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 }}
+            className="bg-dark-hover rounded-xl p-4"
+          >
+            <p className="text-xs text-text-muted mb-1 uppercase tracking-wide">Investi</p>
+            <p className="text-xl font-bold text-text-primary">
+              {formatCurrency(totalInvested)}
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Variation</p>
-            <p className={`text-xl font-semibold ${
-              metrics.absoluteChange >= 0 ? 'text-green-600' : 'text-red-600'
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="bg-dark-hover rounded-xl p-4"
+          >
+            <p className="text-xs text-text-muted mb-1 uppercase tracking-wide">Variation</p>
+            <div className="flex items-center gap-1">
+              {(metrics.currentValue - totalInvested) >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-accent-green" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-accent-red" />
+              )}
+              <p className={`text-xl font-bold ${
+                (metrics.currentValue - totalInvested) >= 0 ? 'text-accent-green' : 'text-accent-red'
+              }`}>
+                {(metrics.currentValue - totalInvested) >= 0 ? '+' : ''}
+                {formatCurrency(metrics.currentValue - totalInvested)}
+              </p>
+            </div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25 }}
+            className="bg-dark-hover rounded-xl p-4"
+          >
+            <p className="text-xs text-text-muted mb-1 uppercase tracking-wide">Performance</p>
+            <p className={`text-xl font-bold ${
+              ((metrics.currentValue - totalInvested) / totalInvested * 100) >= 0 ? 'text-accent-green' : 'text-accent-red'
             }`}>
-              {metrics.absoluteChange >= 0 ? '+' : ''}
-              {formatCurrency(metrics.absoluteChange)}
+              {((metrics.currentValue - totalInvested) / totalInvested * 100) >= 0 ? '+' : ''}
+              {totalInvested > 0 ? ((metrics.currentValue - totalInvested) / totalInvested * 100).toFixed(2) : '0.00'}%
             </p>
-          </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Performance</p>
-            <p className={`text-xl font-semibold ${
-              metrics.percentChange >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {metrics.percentChange >= 0 ? '+' : ''}
-              {metrics.percentChange.toFixed(2)}%
-            </p>
-          </div>
+          </motion.div>
         </div>
       )}
 
       {/* Chart */}
-      <div className="w-full h-80">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="w-full h-80 min-h-[320px]"
+      >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={trendColor} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+              <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#F1C086" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#F1C086" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorRed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
             <XAxis 
               dataKey="date" 
               tickFormatter={formatShortDate}
-              stroke="#9ca3af"
+              stroke="#64748B"
               style={{ fontSize: '12px' }}
+              tickLine={false}
             />
             <YAxis 
               tickFormatter={(value) => formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              stroke="#9ca3af"
+              stroke="#64748B"
               style={{ fontSize: '12px' }}
               width={80}
+              tickLine={false}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area 
               type="monotone" 
               dataKey="value" 
-              stroke={trendColor}
-              strokeWidth={2}
-              fill="url(#colorValue)"
+              stroke={stroke}
+              strokeWidth={3}
+              fill={fill}
               dot={false}
-              activeDot={{ r: 6, fill: trendColor }}
+              activeDot={{ r: 6, fill: stroke, strokeWidth: 0 }}
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </motion.div>
 
       {/* Footer info */}
       <div className="mt-4 text-center">
-        <p className="text-xs text-gray-500">
-          Historique sur {period} jours • {history.length} points de données
+        <p className="text-xs text-text-muted">
+          {period === 'all' 
+            ? `Historique complet • ${history.length} points de données`
+            : `${history.length} points de données • Période de ${period} jours`
+          }
         </p>
       </div>
-    </div>
+    </motion.div>
   )
 }
-

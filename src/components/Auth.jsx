@@ -1,4 +1,11 @@
+/**
+ * Auth component - Modern dark mode authentication screen
+ * Inspired by Finary design with glassmorphism and smooth animations
+ */
+
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Mail, Lock, TrendingUp, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Auth() {
@@ -15,7 +22,6 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        // Sign up new user
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -27,7 +33,6 @@ export default function Auth() {
           setMessage('Account created! Please check your email for verification.')
         }
       } else {
-        // Sign in existing user
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -43,78 +48,152 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-sm p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">
-          Finarian
-        </h1>
-        <p className="text-center text-gray-600 mb-6">
-          {isSignUp ? 'Create your account' : 'Sign in to your account'}
-        </p>
-
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border rounded-lg p-2 w-full focus:ring focus:ring-blue-200 focus:outline-none"
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="border rounded-lg p-2 w-full focus:ring focus:ring-blue-200 focus:outline-none"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {message && (
-            <div className={`text-sm p-3 rounded-lg ${
-              message.includes('created') || message.includes('verification')
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-700'
-            }`}>
-              {message}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setMessage('')
-            }}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            {isSignUp
-              ? 'Already have an account? Sign In'
-              : "Don't have an account? Sign Up"}
-          </button>
-        </div>
+    <div className="min-h-screen bg-gradient-dark flex items-center justify-center px-4 py-8">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-beige/10 rounded-full blur-3xl" />
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative w-full max-w-md"
+      >
+        {/* Logo and Title */}
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-2xl mb-4 shadow-glow-primary"
+          >
+            <TrendingUp className="w-8 h-8 text-white" />
+          </motion.div>
+          
+          <motion.h1
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-4xl font-bold text-text-primary mb-2"
+          >
+            Finarian
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-text-secondary text-sm"
+          >
+            {isSignUp ? 'Create your account' : 'Welcome back! Sign in to continue'}
+          </motion.p>
+        </div>
+
+        {/* Auth Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="card glass"
+        >
+          <form onSubmit={handleAuth} className="space-y-5">
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="input-field w-full pl-12"
+                  placeholder="your@email.com"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="input-field w-full pl-12"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {/* Message Display */}
+            {message && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`text-sm p-4 rounded-xl border ${
+                  message.includes('created') || message.includes('verification')
+                    ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/20'
+                    : 'bg-accent-red/10 text-accent-red border-accent-red/20'
+                }`}
+              >
+                {message}
+              </motion.div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <span>{isSignUp ? 'Sign Up' : 'Sign In'}</span>
+              )}
+            </button>
+          </form>
+
+          {/* Toggle Sign Up / Sign In */}
+          <div className="mt-6 pt-6 border-t border-border-subtle text-center">
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setMessage('')
+              }}
+              className="text-accent-beige hover:text-accent-beige/80 text-sm font-medium transition-colors"
+            >
+              {isSignUp
+                ? 'Already have an account? Sign In'
+                : "Don't have an account? Sign Up"}
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center text-text-muted text-xs mt-6"
+        >
+          Manage your portfolio with confidence
+        </motion.p>
+      </motion.div>
     </div>
   )
 }

@@ -1,4 +1,11 @@
+/**
+ * EditAssetModal component - Modern dark mode edit modal
+ * Smooth animations and clean design
+ */
+
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { X, Save, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function EditAssetModal({ asset, onClose, onSave }) {
@@ -23,24 +30,17 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
     }
   }, [asset])
 
-  // Handle clicking outside modal to close
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
-
   // Handle ESC key to close
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !loading) {
         onClose()
       }
     }
     
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+  }, [onClose, loading])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -74,7 +74,6 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
     setError('')
 
     try {
-      // Update Supabase and get the updated row back with .select()
       const { data, error: updateError } = await supabase
         .from('assets')
         .update({
@@ -91,8 +90,6 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
 
       if (updateError) throw updateError
 
-      // Construct the updated asset object
-      // Use returned data if available, otherwise construct manually
       const updatedAsset = (data && data.length > 0) ? data[0] : {
         ...asset,
         name: name.trim(),
@@ -104,7 +101,6 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         last_updated: new Date().toISOString(),
       }
 
-      // Call parent callback with the updated asset
       if (onSave) {
         onSave(updatedAsset)
       }
@@ -118,128 +114,180 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
     }
   }
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget && !loading) {
+      onClose()
+    }
+  }
+
   if (!asset) return null
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          Modifier l'actif
-        </h2>
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+        onClick={handleBackdropClick}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom de l'actif
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ex: Actions Apple"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Catégorie
-            </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="ex: Actions, Crypto, Immobilier"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Symbole Yahoo Finance <span className="text-gray-500 text-xs">(optionnel)</span>
-            </label>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="ex: AAPL, MSFT, BTC-USD"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              📈 Pour mise à jour automatique du prix
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Quantité
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="1.00"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prix d'achat unitaire (€)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              placeholder="0.00"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prix actuel (€)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={currentPrice}
-              onChange={(e) => setCurrentPrice(e.target.value)}
-              placeholder="0.00"
-              className="border border-gray-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-200 focus:outline-none"
-            />
-          </div>
-
-          {error && (
-            <div className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-md bg-dark-card border border-border-subtle rounded-2xl shadow-card p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-text-primary">
+              Modifier l'actif
+            </h2>
             <button
-              type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-xl hover:bg-dark-hover text-text-muted hover:text-text-primary transition-all disabled:opacity-50"
             >
-              {loading ? 'Enregistrement...' : 'Enregistrer'}
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </form>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Asset Name */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Nom de l'actif
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ex: Actions Apple"
+                className="input-field w-full"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Catégorie
+              </label>
+              <input
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="ex: Actions, Crypto, Immobilier"
+                className="input-field w-full"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Symbol */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Symbole Yahoo Finance <span className="text-text-muted text-xs">(optionnel)</span>
+              </label>
+              <input
+                type="text"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                placeholder="ex: AAPL, MSFT, BTC-USD"
+                className="input-field w-full"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Quantity, Purchase Price, Current Price */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Quantité
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="input-field w-full"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Prix achat (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  className="input-field w-full"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Prix actuel (€)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={currentPrice}
+                  onChange={(e) => setCurrentPrice(e.target.value)}
+                  className="input-field w-full"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm p-3 rounded-xl bg-accent-red/10 text-accent-red border border-accent-red/20"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="btn-secondary flex-1"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Enregistrement...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Enregistrer</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </motion.div>
       </div>
-    </div>
+    </>
   )
 }
-

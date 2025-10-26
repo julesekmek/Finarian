@@ -7,7 +7,8 @@
 export const CHART_PERIODS = {
   WEEK: 7,
   MONTH: 30,
-  QUARTER: 90
+  QUARTER: 90,
+  ALL: 'all' // Toutes les données depuis le début
 }
 
 export const DEFAULT_PERIOD = CHART_PERIODS.MONTH

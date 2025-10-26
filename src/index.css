@@ -1,13 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    @apply border-border-subtle;
+  }
+  
+  body {
+    @apply bg-dark-bg text-text-primary font-inter antialiased;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-default rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
+
+@layer components {
+  /* Card component base */
+  .card {
+    @apply bg-dark-card rounded-2xl shadow-card p-6 border border-border-subtle;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 active:scale-95;
+    background-color: #F1C086;
+  }
+  
+  .btn-primary:hover {
+    background-color: rgba(241, 192, 134, 0.9);
+    box-shadow: 0 0 20px rgba(241, 192, 134, 0.3);
+  }
+
+  .btn-secondary {
+    @apply bg-dark-hover text-text-primary font-semibold px-6 py-3 rounded-xl transition-all duration-200 hover:bg-dark-hover/80 border border-border-subtle;
+  }
+
+  .btn-outline {
+    @apply bg-transparent text-text-primary font-semibold px-6 py-3 rounded-xl transition-all duration-200 border-2 border-border-default hover:bg-dark-hover;
+  }
+
+  /* Input fields */
+  .input-field {
+    @apply bg-dark-hover border border-border-subtle rounded-xl px-4 py-3 text-text-primary placeholder-text-muted focus:outline-none transition-all;
+  }
+  
+  .input-field:focus {
+    border-color: #E8DCC8;
+    box-shadow: 0 0 0 3px rgba(232, 220, 200, 0.5);
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-dark-card/50 backdrop-blur-xl border border-border-subtle;
+  }
+
+  /* Text gradients */
+  .text-gradient-primary {
+    background: linear-gradient(to right, #F1C086, #fb923c);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-beige {
+    @apply bg-gradient-to-r from-accent-beige to-orange-200 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* Number animations */
+  @keyframes countUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-count-up {
+    animation: countUp 0.5s ease-out;
+  }
 }
 

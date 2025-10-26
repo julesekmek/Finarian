@@ -1,11 +1,12 @@
 /**
- * AssetPerformanceCard component
- * Displays detailed performance card for a single asset
- * Includes expandable view with full chart and metrics
+ * AssetPerformanceCard component - Modern performance card
+ * Expandable card with beautiful dark mode chart
  */
 
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { ChevronRight, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import { getAssetHistory, calculateAssetPerformance } from '../lib/portfolioHistory'
 import { formatCurrency, formatShortDate } from '../lib/utils/formatters'
 
@@ -34,7 +35,6 @@ export default function AssetPerformanceCard({ asset, period }) {
     fetchData()
   }, [asset.id, period])
 
-
   // Custom tooltip
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length > 0) {
@@ -42,9 +42,9 @@ export default function AssetPerformanceCard({ asset, period }) {
       const date = new Date(data.date)
       const formattedDate = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
       return (
-        <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-200">
-          <p className="text-xs text-gray-600 mb-1">{formattedDate}</p>
-          <p className="text-sm font-semibold text-gray-900">
+        <div className="bg-dark-card border border-border-subtle px-3 py-2 rounded-xl shadow-card">
+          <p className="text-xs text-text-muted mb-1">{formattedDate}</p>
+          <p className="text-sm font-semibold text-text-primary">
             {formatCurrency(data.price)}
           </p>
         </div>
@@ -55,36 +55,36 @@ export default function AssetPerformanceCard({ asset, period }) {
 
   // Get trend color
   const getTrendColor = () => {
-    if (!metrics) return '#6366f1'
-    if (metrics.trend === 'positive') return '#10b981'
-    if (metrics.trend === 'negative') return '#ef4444'
-    return '#6366f1'
+    if (!metrics) return '#3B82F6'
+    if (metrics.trend === 'positive') return '#F1C086'
+    if (metrics.trend === 'negative') return '#EF4444'
+    return '#3B82F6'
   }
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-4 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/3 mb-3"></div>
-        <div className="h-20 bg-gray-100 rounded"></div>
+      <div className="card animate-pulse">
+        <div className="h-4 bg-dark-hover rounded w-1/3 mb-3"></div>
+        <div className="h-24 bg-dark-hover rounded"></div>
       </div>
     )
   }
 
   if (!history || history.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="card">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-gray-900">{asset.name}</h3>
+            <h3 className="font-semibold text-text-primary">{asset.name}</h3>
             {asset.symbol && (
-              <p className="text-xs text-gray-500">{asset.symbol}</p>
+              <p className="text-xs text-text-muted">{asset.symbol}</p>
             )}
           </div>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+          <span className="text-xs text-text-muted bg-dark-hover px-2 py-1 rounded-lg">
             {asset.category}
           </span>
         </div>
-        <p className="text-sm text-gray-500 text-center py-4">
+        <p className="text-sm text-text-muted text-center py-4">
           Aucun historique disponible
         </p>
       </div>
@@ -92,54 +92,65 @@ export default function AssetPerformanceCard({ asset, period }) {
   }
 
   const trendColor = getTrendColor()
+  const isPositive = metrics.priceChangePercent >= 0
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+    <motion.div
+      layout
+                className="card hover:border-accent-primary/30 transition-all cursor-pointer"
+      onClick={() => setExpanded(!expanded)}
+    >
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-start justify-between mb-2">
+      <div className="border-b border-border-subtle pb-4">
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-lg">{asset.name}</h3>
-            {asset.symbol && (
-              <p className="text-sm text-gray-500">{asset.symbol}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-text-primary text-lg">{asset.name}</h3>
+              {asset.symbol && (
+                        <span className="text-xs bg-accent-beige/20 text-gray-700 px-2 py-1 rounded-lg font-mono">
+                  {asset.symbol}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-text-muted capitalize">{asset.category}</p>
+          </div>
+          <button className="p-2 hover:bg-dark-hover rounded-xl transition-all">
+            {expanded ? (
+              <ChevronDown className="w-5 h-5 text-text-muted" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-text-muted" />
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {asset.category}
-            </span>
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {expanded ? '▼' : '▶'}
-            </button>
-          </div>
+          </button>
         </div>
 
         {/* Key metrics */}
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <div>
-            <p className="text-xs text-gray-500">Prix actuel</p>
-            <p className="text-lg font-semibold text-gray-900">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-dark-hover rounded-xl p-3">
+            <p className="text-xs text-text-muted mb-1">Prix actuel</p>
+            <p className="text-lg font-bold text-text-primary">
               {formatCurrency(metrics.currentPrice)}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Variation ({period}J)</p>
-            <p className={`text-lg font-semibold ${
-              metrics.priceChangePercent >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {metrics.priceChangePercent >= 0 ? '+' : ''}
-              {metrics.priceChangePercent.toFixed(2)}%
-            </p>
+          <div className="bg-dark-hover rounded-xl p-3">
+            <p className="text-xs text-text-muted mb-1">Variation ({period}J)</p>
+            <div className="flex items-center gap-1">
+              {isPositive ? (
+                <TrendingUp className="w-4 h-4 text-accent-green" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-accent-red" />
+              )}
+              <p className={`text-lg font-bold ${isPositive ? 'text-accent-green' : 'text-accent-red'}`}>
+                {isPositive ? '+' : ''}
+                {metrics.priceChangePercent.toFixed(2)}%
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Mini chart (always visible) */}
       {!expanded && (
-        <div className="h-24 px-2">
+        <div className="h-20 min-h-[80px] mt-4">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={history}>
               <Line 
@@ -155,99 +166,108 @@ export default function AssetPerformanceCard({ asset, period }) {
       )}
 
       {/* Expanded view */}
-      {expanded && (
-        <div className="p-4 space-y-4">
-          {/* Detailed metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-1">Quantité</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {parseFloat(asset.quantity).toFixed(4)}
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-1">Prix d'achat</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {formatCurrency(asset.purchase_price)}
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-1">Valeur actuelle</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {formatCurrency(metrics.currentValue)}
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-1">Gain/Perte</p>
-              <p className={`text-sm font-semibold ${
-                metrics.valueChange >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {metrics.valueChange >= 0 ? '+' : ''}
-                {formatCurrency(metrics.valueChange)}
-              </p>
-            </div>
-          </div>
-
-          {/* Full chart */}
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={formatShortDate}
-                  stroke="#9ca3af"
-                  style={{ fontSize: '11px' }}
-                />
-                <YAxis 
-                  tickFormatter={(value) => `${value}€`}
-                  stroke="#9ca3af"
-                  style={{ fontSize: '11px' }}
-                  width={60}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="price" 
-                  stroke={trendColor}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4, fill: trendColor }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Performance summary */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">
-                  Performance sur {period} jours
-                </p>
-                <p className="text-xs text-gray-600">
-                  {metrics.dataPoints} points de données
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="pt-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Detailed metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-dark-hover rounded-xl p-3">
+                <p className="text-xs text-text-muted mb-1">Quantité</p>
+                <p className="text-sm font-semibold text-text-primary">
+                  {parseFloat(asset.quantity).toFixed(4)}
                 </p>
               </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${
-                  metrics.valueChangePercent >= 0 ? 'text-green-600' : 'text-red-600'
+              
+              <div className="bg-dark-hover rounded-xl p-3">
+                <p className="text-xs text-text-muted mb-1">Prix d'achat</p>
+                <p className="text-sm font-semibold text-text-primary">
+                  {formatCurrency(asset.purchase_price)}
+                </p>
+              </div>
+              
+              <div className="bg-dark-hover rounded-xl p-3">
+                <p className="text-xs text-text-muted mb-1">Valeur actuelle</p>
+                <p className="text-sm font-semibold text-text-primary">
+                  {formatCurrency(metrics.currentValue)}
+                </p>
+              </div>
+              
+              <div className="bg-dark-hover rounded-xl p-3">
+                <p className="text-xs text-text-muted mb-1">Gain/Perte</p>
+                <p className={`text-sm font-semibold ${
+                  metrics.valueChange >= 0 ? 'text-accent-green' : 'text-accent-red'
                 }`}>
-                  {metrics.valueChangePercent >= 0 ? '+' : ''}
-                  {metrics.valueChangePercent.toFixed(2)}%
-                </p>
-                <p className="text-xs text-gray-600">
-                  de {formatCurrency(metrics.investedValue)} investi
+                  {metrics.valueChange >= 0 ? '+' : ''}
+                  {formatCurrency(metrics.valueChange)}
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+
+            {/* Full chart */}
+            <div className="h-56 min-h-[224px] bg-dark-hover rounded-xl p-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatShortDate}
+                    stroke="#64748B"
+                    style={{ fontSize: '11px' }}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => `${value}€`}
+                    stroke="#64748B"
+                    style={{ fontSize: '11px' }}
+                    width={60}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="price" 
+                    stroke={trendColor}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: trendColor }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Performance summary */}
+            <div className="bg-gradient-to-r from-accent-green/10 to-accent-blue/10 border border-accent-green/20 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text-primary mb-1">
+                    Performance sur {period} jours
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {metrics.dataPoints} points de données
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-2xl font-bold ${
+                    metrics.valueChangePercent >= 0 ? 'text-accent-green' : 'text-accent-red'
+                  }`}>
+                    {metrics.valueChangePercent >= 0 ? '+' : ''}
+                    {metrics.valueChangePercent.toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    de {formatCurrency(metrics.investedValue)} investi
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
-
