@@ -7,12 +7,18 @@
  * @param {Function} onBack - Callback pour retourner à la vue précédente
  */
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Edit, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '../lib/utils/formatters'
 import { calculateAssetMetrics, calculateCategoryMetrics } from '../lib/utils/calculations'
+import EditAssetModal from './EditAssetModal'
+import ConfirmDeleteModal from './ConfirmDeleteModal'
 
 export default function CategoryDetail({ categoryName, assets, onBack }) {
+  const [selectedAsset, setSelectedAsset] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   // Filter assets for this category
   const categoryAssets = assets.filter(asset => asset.category === categoryName)
 
@@ -32,6 +38,37 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     ...asset,
     metrics: calculateAssetMetrics(asset)
   }))
+
+  // Modal handlers
+  const handleOpenEdit = (asset) => {
+    setSelectedAsset(asset)
+    setShowEditModal(true)
+  }
+
+  const handleCloseEdit = () => {
+    setShowEditModal(false)
+    setSelectedAsset(null)
+  }
+
+  const handleSaveEdit = async () => {
+    setShowEditModal(false)
+    setSelectedAsset(null)
+  }
+
+  const handleOpenDelete = (asset) => {
+    setSelectedAsset(asset)
+    setShowDeleteModal(true)
+  }
+
+  const handleCloseDelete = () => {
+    setShowDeleteModal(false)
+    setSelectedAsset(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    setShowDeleteModal(false)
+    setSelectedAsset(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -141,6 +178,23 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                       )}
                     </div>
                   </div>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOpenEdit(asset)}
+                      className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+                      title="Modifier l'actif"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenDelete(asset)}
+                      className="p-2 bg-dark-hover hover:bg-border-default text-accent-red rounded-lg transition-colors"
+                      title="Supprimer l'actif"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Asset Metrics Grid */}
@@ -192,6 +246,23 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
           })}
         </div>
       </motion.div>
+
+      {/* Modals */}
+      {showEditModal && selectedAsset && (
+        <EditAssetModal
+          asset={selectedAsset}
+          onClose={handleCloseEdit}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {showDeleteModal && selectedAsset && (
+        <ConfirmDeleteModal
+          asset={selectedAsset}
+          onClose={handleCloseDelete}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   )
 }
