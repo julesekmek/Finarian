@@ -512,3 +512,36 @@ Message: ♻️ Major refactoring: clean code and architecture optimization
 Files: 25 changed, 116 insertions(+), 5266 deletions(-)
 ```
 
+---
+
+## 📝 Addendum - Documentation Restaurée
+
+**Date**: 26 octobre 2025 (même jour)
+
+### Décision Utilisateur
+Suite à la demande de l'utilisateur, les **18 fichiers de documentation** ont été **restaurés** car ils contiennent un contexte historique précieux pour comprendre l'évolution du projet.
+
+### Fichiers Restaurés (Commit 2b932db)
+✅ Tous les 18 fichiers de documentation historique ont été récupérés et sont maintenant disponibles dans le repository.
+
+### Nouvelle Organisation Recommandée
+Pour une meilleure organisation, ces fichiers pourraient être déplacés dans un dossier dédié :
+```
+docs/
+├── history/                    # Documentation historique
+│   ├── ASSET_HISTORY_SETUP.md
+│   ├── AUTOMATIC_PRICE_UPDATE.md
+│   ├── CHANGELOG.md
+│   ├── V2_SUMMARY.md
+│   └── ... (autres fichiers historiques)
+└── guides/                     # Guides actuels
+    ├── QUICK_START_GUIDE.md
+    ├── HISTORICAL_DATA_GUIDE.md
+    └── YAHOO_FINANCE_SYMBOLS.md
+```
+
+### Note Importante
+- ✅ **Code refactorisé** reste inchangé (clean et optimisé)
+- ✅ **Documentation historique** désormais disponible pour référence
+- ✅ **Meilleur des deux mondes** : code propre + contexte historique
+
