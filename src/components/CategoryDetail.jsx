@@ -19,6 +19,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
   // Filter assets for this category
   const categoryAssets = assets.filter(asset => asset.category === categoryName)
 
@@ -50,9 +51,9 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     setSelectedAsset(null)
   }
 
-  const handleSaveEdit = async () => {
-    setShowEditModal(false)
-    setSelectedAsset(null)
+  const handleSaveEdit = () => {
+    // No need to manually update - realtime subscription in App.jsx will handle it
+    handleCloseEdit()
   }
 
   const handleOpenDelete = (asset) => {
@@ -65,9 +66,9 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     setSelectedAsset(null)
   }
 
-  const handleConfirmDelete = async () => {
-    setShowDeleteModal(false)
-    setSelectedAsset(null)
+  const handleConfirmDelete = () => {
+    // No need to manually update - realtime subscription in App.jsx will handle it
+    handleCloseDelete()
   }
 
   return (
@@ -185,14 +186,14 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                       className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
                       title="Modifier l'actif"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleOpenDelete(asset)}
                       className="p-2 bg-dark-hover hover:bg-border-default text-accent-red rounded-lg transition-colors"
                       title="Supprimer l'actif"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
