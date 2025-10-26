@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Auth from './components/Auth'
 import Header from './components/Header'
+import PortfolioChart from './components/PortfolioChart'
 import AssetList from './components/AssetList'
 import AddAssetForm from './components/AddAssetForm'
+import Performance from './components/Performance'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState([])
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   // Monitor auth state changes
   useEffect(() => {
@@ -91,17 +94,29 @@ export default function App() {
   // Show dashboard if logged in
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <Header 
           assets={assets} 
           userEmail={user.email} 
           onPricesUpdated={fetchAssets}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
         />
         
-        <div className="space-y-6">
-          <AssetList userId={user.id} />
-          <AddAssetForm userId={user.id} />
-        </div>
+        {currentPage === 'dashboard' ? (
+          <div className="space-y-6">
+            {/* Portfolio evolution chart */}
+            <PortfolioChart userId={user.id} />
+            
+            {/* Assets management */}
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+              <AssetList userId={user.id} />
+              <AddAssetForm userId={user.id} />
+            </div>
+          </div>
+        ) : (
+          <Performance userId={user.id} assets={assets} />
+        )}
       </div>
     </div>
   )

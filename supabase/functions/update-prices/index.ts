@@ -150,9 +150,12 @@ Deno.serve(async (req) => {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
-    // Batch update all successful price fetches
+    // Batch update all successful price fetches + insert into history
     if (updates.length > 0) {
+      const today = new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
+      
       for (const update of updates) {
+        // 1. Update current_price in assets table
         const { error: updateError } = await supabaseAdmin
           .from('assets')
           .update({
@@ -170,7 +173,27 @@ Deno.serve(async (req) => {
             reason: `Database update failed: ${updateError.message}`
           })
         } else {
-          console.log(`✓ Updated ${update.symbol}: ${update.price}`)
+          // 2. ✨ UPSERT into asset_history (1 point per day)
+          // If an entry for today exists, update it; otherwise insert
+          const { error: historyError } = await supabaseAdmin
+            .from('asset_history')
+            .upsert({
+              asset_id: update.id,
+              user_id: user.id,
+              price: update.price,
+              date: today,
+              recorded_at: new Date().toISOString()
+            }, {
+              onConflict: 'asset_id,date', // Conflict resolution on unique constraint
+              ignoreDuplicates: false // Update if exists
+            })
+
+          if (historyError) {
+            console.error(`Failed to upsert history for ${update.id}:`, historyError)
+            // Note: we don't fail the whole update, just log the error
+          } else {
+            console.log(`✓ Updated ${update.symbol}: ${update.price} (daily snapshot recorded)`)
+          }
         }
       }
     }

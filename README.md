@@ -177,6 +177,12 @@ The app uses EUR (€) with French formatting (`fr-FR`). To change to USD or oth
 ✅ Increment/decrement asset quantities  
 ✅ Edit and delete assets with confirmation  
 ✅ **🔄 Automatic price updates** via Yahoo Finance API  
+✅ **⏰ Automated daily updates** via GitHub Actions (NEW!)  
+✅ **📊 Portfolio evolution chart** with interactive visualization (NEW!)  
+✅ **📈 Historical tracking** - Store daily price snapshots (NEW!)  
+✅ **⏱️ Multi-period view** - 7/30/90 days analysis (NEW!)  
+✅ **📉 Performance page** - Compare and analyze all assets (NEW!)  
+✅ **🎯 Smart sorting & filtering** - By performance, value, or name (NEW!)  
 ✅ Supabase Edge Function for secure API calls  
 ✅ Yahoo Finance symbol support (stocks, crypto, indices, forex)  
 ✅ Realtime synchronization across devices  
@@ -203,15 +209,100 @@ Finarian now supports **automatic price updates** via Yahoo Finance!
 
 📖 **Full documentation**: See [AUTOMATIC_PRICE_UPDATE.md](./AUTOMATIC_PRICE_UPDATE.md)
 
+## 📊 Portfolio Evolution Chart (V2 - NEW!)
+
+Visualize your portfolio performance over time with an interactive chart!
+
+### Features
+- 📈 **Interactive area chart** with beautiful gradients
+- ⏱️ **Multiple time periods**: Switch between 7, 30, or 90 days
+- 💰 **Performance metrics**: Current value, variation, and percentage change
+- 🎨 **Smart coloring**: Green for gains, red for losses, blue for neutral
+- 📱 **Fully responsive** design
+- 🔄 **Auto-refresh**: Updates after each price update
+
+### How It Works
+1. Price updates are automatically stored in `asset_history` table (1 snapshot per day)
+2. The chart calculates total portfolio value by date: `Σ(price × quantity)`
+3. Performance metrics show the evolution compared to the start of the selected period
+
+📖 **Full documentation**: See [PORTFOLIO_CHART_GUIDE.md](./PORTFOLIO_CHART_GUIDE.md)
+
+## 📈 Performance Page (V2 - NEW!)
+
+Analyze and compare individual asset performance with detailed metrics and visualizations!
+
+### Features
+- 🏆 **Global overview**: Best/worst performers, total performance, asset breakdown
+- 📊 **Individual asset cards**: Expandable cards with mini/full charts
+- 📈 **Detailed metrics**: Price change, value change, performance %, trend analysis
+- 🔄 **Multi-period analysis**: Compare 7, 30, or 90 days performance
+- 🎯 **Smart sorting**: Sort by performance, value, or name
+- 📉 **Visual trends**: Color-coded performance (green/red/blue)
+- 🎨 **Interactive charts**: Hover tooltips, expandable views
+- 📱 **Responsive design**: Optimized for desktop and mobile
+
+### What You Can Do
+- Identify your best and worst performing assets
+- Compare performance across different time periods
+- Analyze individual asset trends with detailed charts
+- Sort assets by performance to make informed decisions
+- Track value changes and gains/losses over time
+
+### Navigation
+Access the Performance page via the **📈 Performance** button in the header navigation.
+
+📖 **Full documentation**: See [PERFORMANCE_PAGE_GUIDE.md](./PERFORMANCE_PAGE_GUIDE.md)
+
+## ⏰ Automated Daily Updates (V2 - NEW!)
+
+Set up automated daily price updates using GitHub Actions - no server required!
+
+### Features
+- 🤖 **Fully automated**: Updates run every day at 8:00 UTC (10:00 Paris)
+- 🆓 **100% free**: Uses GitHub Actions free tier
+- 📊 **Detailed logs**: View execution history and results
+- 🔄 **Manual trigger**: Run updates on-demand from GitHub interface
+- 🔐 **Secure**: Credentials stored as GitHub Secrets
+- ⚡ **Fast**: ~30 seconds execution time
+- 📧 **Notifications**: Email alerts on failures
+
+### How It Works
+1. GitHub Actions triggers daily at 8:00 UTC
+2. Authenticates with your Supabase account
+3. Calls the `update-prices` Edge Function
+4. Updates all assets with Yahoo Finance symbols
+5. Stores daily snapshots in `asset_history`
+6. Your charts and performance metrics auto-update!
+
+### Quick Setup
+```bash
+# 1. Push the workflow to GitHub
+git add .github/workflows/daily-price-update.yml
+git commit -m "feat: Add automated daily price updates"
+git push
+
+# 2. Configure GitHub Secrets (in repo Settings → Secrets)
+# - SUPABASE_URL
+# - SUPABASE_ANON_KEY  
+# - SUPABASE_USER_EMAIL
+# - SUPABASE_USER_PASSWORD
+
+# 3. Test manually from Actions tab
+# 4. Done! Prices will update automatically every morning
+```
+
+📖 **Full documentation**: See [AUTOMATION_SETUP.md](./AUTOMATION_SETUP.md)
+
 ## Next Steps (Future Enhancements)
 
-- 📊 **Charts and Visualizations**: Add portfolio allocation pie charts and gain/loss trend graphs
+- 🥧 **Allocation Charts**: Add portfolio allocation pie charts by category
 - 🏷️ **Asset Filtering**: Filter assets by category
-- 📈 **Historical Tracking**: Track price history and portfolio value over time
 - 💱 **Multi-Currency Support**: Support multiple currencies with conversion rates
-- 📄 **Export Data**: Export portfolio to CSV or PDF
+- 📄 **Export Data**: Export portfolio and charts to CSV or PDF
 - 🔔 **Price Alerts**: Set alerts for price targets or percentage changes
-- ⏰ **Scheduled Updates**: Auto-update prices daily via cron job
+- 🎯 **Performance targets**: Set goals for each asset
+- 🤖 **AI Recommendations**: Smart portfolio rebalancing suggestions
 
 ---
 
