@@ -1,0 +1,48 @@
+{
+  // 📁 Tri des fichiers dans l'explorateur
+  "explorer.sortOrder": "type",
+  "explorer.sortOrderLexicographicOptions": "default",
+  
+  // 🎯 File Nesting - Regroupe les fichiers liés
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "*.js": "${capture}.js.map, ${capture}.min.js, ${capture}.d.ts",
+    "*.jsx": "${capture}.js",
+    "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.*.ts",
+    "*.tsx": "${capture}.ts, ${capture}.d.ts, ${capture}.*.tsx",
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, npm-debug.log*",
+    "README.md": "README.*.md, CHANGELOG.md, LICENSE, AUTHORS, CONTRIBUTING.md",
+    ".gitignore": ".gitattributes, .gitmodules, .gitmessage, .mailmap, .git-blame*",
+    "vite.config.js": "vite.config.*.js, vitest.config.js",
+    "tailwind.config.js": "tailwind.config.*.js, postcss.config.js"
+  },
+  
+  // 🗂️ Affichage des dossiers
+  "explorer.compactFolders": false,
+  
+  // 🎨 Mise en forme pour React/JSX
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  
+  // 🔍 Exclure des fichiers de la recherche
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/package-lock.json": true,
+    "**/.git": true
+  },
+  
+  // 👁️ Cacher certains fichiers dans l'explorateur (optionnel)
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": false
+  }
+}
+
