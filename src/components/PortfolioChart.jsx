@@ -1,19 +1,17 @@
+/**
+ * PortfolioChart component
+ * Displays interactive chart of portfolio value evolution
+ * Shows performance metrics and allows period selection
+ */
+
 import { useState, useEffect } from 'react'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart
-} from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getPortfolioHistory, calculatePerformanceMetrics } from '../lib/portfolioHistory'
+import { formatCurrency, formatShortDate } from '../lib/utils/formatters'
+import { DEFAULT_PERIOD, CHART_PERIODS } from '../lib/utils/constants'
 
 export default function PortfolioChart({ userId }) {
-  const [period, setPeriod] = useState(30) // Default 30 days
+  const [period, setPeriod] = useState(DEFAULT_PERIOD)
   const [history, setHistory] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -45,35 +43,21 @@ export default function PortfolioChart({ userId }) {
     fetchHistory()
   }, [userId, period])
 
-  // Format currency for display
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-
-  // Format date for tooltip
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('fr-FR', { 
-      day: '2-digit', 
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
   // Custom tooltip component
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload
+      const date = new Date(data.date)
+      const formattedDate = date.toLocaleDateString('fr-FR', { 
+        day: '2-digit', 
+        month: 'short',
+        year: 'numeric'
+      })
       return (
         <div className="bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600 mb-1">{formatDate(data.date)}</p>
+          <p className="text-sm text-gray-600 mb-1">{formattedDate}</p>
           <p className="text-lg font-semibold text-gray-900">
-            {formatCurrency(data.value)}
+            {formatCurrency(data.value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </p>
         </div>
       )
@@ -139,22 +123,22 @@ export default function PortfolioChart({ userId }) {
           📊 Évolution du patrimoine
         </h2>
         
-        {/* Period selector */}
-        <div className="flex gap-2">
-          {[7, 30, 90].map((days) => (
-            <button
-              key={days}
-              onClick={() => setPeriod(days)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                period === days
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {days}J
-            </button>
-          ))}
-        </div>
+          {/* Period selector */}
+          <div className="flex gap-2">
+            {Object.values(CHART_PERIODS).map((days) => (
+              <button
+                key={days}
+                onClick={() => setPeriod(days)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === days
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {days}J
+              </button>
+            ))}
+          </div>
       </div>
 
       {/* Performance metrics */}
@@ -209,15 +193,12 @@ export default function PortfolioChart({ userId }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="date" 
-              tickFormatter={(date) => {
-                const d = new Date(date)
-                return `${d.getDate()}/${d.getMonth() + 1}`
-              }}
+              tickFormatter={formatShortDate}
               stroke="#9ca3af"
               style={{ fontSize: '12px' }}
             />
             <YAxis 
-              tickFormatter={(value) => formatCurrency(value)}
+              tickFormatter={(value) => formatCurrency(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               stroke="#9ca3af"
               style={{ fontSize: '12px' }}
               width={80}

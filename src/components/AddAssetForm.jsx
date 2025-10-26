@@ -1,7 +1,12 @@
+/**
+ * AddAssetForm component
+ * Form for adding new assets to the portfolio
+ */
+
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-export default function AddAssetForm({ userId, onAssetAdded }) {
+export default function AddAssetForm({ userId }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
   const [symbol, setSymbol] = useState('')
@@ -62,9 +67,6 @@ export default function AddAssetForm({ userId, onAssetAdded }) {
       setQuantity('')
       setPurchasePrice('')
       setCurrentPrice('')
-      
-      // Notify parent component
-      if (onAssetAdded) onAssetAdded()
     } catch (err) {
       console.error('Error adding asset:', err)
       setError(err.message || 'Failed to add asset')

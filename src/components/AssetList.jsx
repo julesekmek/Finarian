@@ -1,7 +1,16 @@
+/**
+ * AssetList component
+ * Displays user's assets with real-time updates
+ * Handles editing and deleting assets
+ */
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import EditAssetModal from './EditAssetModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
+import { formatCurrency, formatDate } from '../lib/utils/formatters'
+import { calculateAssetMetrics } from '../lib/utils/calculations'
+import { REALTIME_CHANNELS } from '../lib/utils/constants'
 
 export default function AssetList({ userId }) {
   const [assets, setAssets] = useState([])
@@ -34,13 +43,11 @@ export default function AssetList({ userId }) {
 
     // Subscribe to realtime changes with specific event handlers
     const channel = supabase
-      .channel('realtime:assets')
+      .channel(REALTIME_CHANNELS.ASSETS)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'assets' },
         (payload) => {
-          console.log('Realtime event:', payload.eventType, payload)
-          
           // Handle different event types for better performance
           if (payload.eventType === 'INSERT') {
             // Add new asset to the list if it belongs to this user
@@ -69,24 +76,6 @@ export default function AssetList({ userId }) {
       supabase.removeChannel(channel)
     }
   }, [userId])
-
-  // Format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-    }).format(value)
-  }
-
-  // Format date
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
 
   // Open edit modal
   const handleOpenEdit = (asset) => {
@@ -153,13 +142,8 @@ export default function AssetList({ userId }) {
       
       <div className="space-y-3">
         {assets.map((asset) => {
-          const quantity = parseFloat(asset.quantity) || 0
-          const purchasePrice = parseFloat(asset.purchase_price) || 0
-          const currentPrice = parseFloat(asset.current_price) || purchasePrice
-          const totalPurchaseValue = purchasePrice * quantity
-          const totalCurrentValue = currentPrice * quantity
-          const unrealizedGain = totalCurrentValue - totalPurchaseValue
-          const isPositive = unrealizedGain >= 0
+          // Calculate all asset metrics using utility function
+          const metrics = calculateAssetMetrics(asset)
 
           return (
             <div
@@ -203,19 +187,19 @@ export default function AssetList({ userId }) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-gray-500">Quantité</p>
-                  <p className="font-semibold text-gray-800">{quantity.toFixed(2)}</p>
+                  <p className="font-semibold text-gray-800">{metrics.quantity.toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Prix d'achat unitaire</p>
-                  <p className="font-semibold text-gray-800">{formatCurrency(purchasePrice)}</p>
+                  <p className="font-semibold text-gray-800">{formatCurrency(metrics.purchasePrice)}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Prix actuel</p>
-                  <p className="font-semibold text-gray-800">{formatCurrency(currentPrice)}</p>
+                  <p className="font-semibold text-gray-800">{formatCurrency(metrics.currentPrice)}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Valeur d'achat totale</p>
-                  <p className="font-semibold text-gray-800">{formatCurrency(totalPurchaseValue)}</p>
+                  <p className="font-semibold text-gray-800">{formatCurrency(metrics.totalPurchaseValue)}</p>
                 </div>
               </div>
 
@@ -223,12 +207,12 @@ export default function AssetList({ userId }) {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-sm text-gray-500">Valeur actuelle totale</p>
-                    <p className="text-xl font-bold text-blue-600">{formatCurrency(totalCurrentValue)}</p>
+                    <p className="text-xl font-bold text-blue-600">{formatCurrency(metrics.totalCurrentValue)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">Plus-value / Moins-value</p>
-                    <p className={`text-xl font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                      {isPositive ? '+' : ''}{formatCurrency(unrealizedGain)}
+                    <p className={`text-xl font-semibold ${metrics.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                      {metrics.isPositive ? '+' : ''}{formatCurrency(metrics.unrealizedGain)}
                     </p>
                   </div>
                 </div>

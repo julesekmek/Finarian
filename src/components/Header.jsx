@@ -1,6 +1,14 @@
+/**
+ * Header component
+ * Displays navigation, portfolio totals, and price update button
+ */
+
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { callUpdatePrices } from '../lib/updatePrices'
+import { formatCurrency, formatPercentage, formatWithSign } from '../lib/utils/formatters'
+import { calculatePortfolioTotals } from '../lib/utils/calculations'
+import { NOTIFICATION_DURATION } from '../lib/utils/constants'
 
 export default function Header({ assets, userEmail, onPricesUpdated, currentPage, onPageChange }) {
   const [isUpdating, setIsUpdating] = useState(false)
@@ -37,35 +45,13 @@ export default function Header({ assets, userEmail, onPricesUpdated, currentPage
 
     setIsUpdating(false)
 
-    // Clear message after 5 seconds
-    setTimeout(() => setUpdateMessage(null), 5000)
+    // Clear message after configured duration
+    setTimeout(() => setUpdateMessage(null), NOTIFICATION_DURATION)
   }
 
-  // Calculate totals from assets
-  const totalInvested = assets.reduce((sum, asset) => {
-    const quantity = parseFloat(asset.quantity) || 0
-    const purchasePrice = parseFloat(asset.purchase_price) || 0
-    return sum + (purchasePrice * quantity)
-  }, 0)
-
-  const totalCurrent = assets.reduce((sum, asset) => {
-    const quantity = parseFloat(asset.quantity) || 0
-    const currentPrice = parseFloat(asset.current_price) || parseFloat(asset.purchase_price) || 0
-    return sum + (currentPrice * quantity)
-  }, 0)
-
-  const totalGain = totalCurrent - totalInvested
-  const gainPercent = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0
-  const isPositiveGain = totalGain >= 0
-
-  // Format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-    }).format(value)
-  }
+  // Calculate portfolio totals using utility function
+  const { totalInvested, totalCurrent, totalGain, gainPercent, isPositive } = 
+    calculatePortfolioTotals(assets)
 
   return (
     <header className="bg-white rounded-2xl shadow-sm p-6 mb-6">
@@ -150,11 +136,11 @@ export default function Header({ assets, userEmail, onPricesUpdated, currentPage
         <div>
           <p className="text-sm text-gray-600 mb-1">Gain / Perte total</p>
           <div className="flex items-baseline gap-3">
-            <p className={`text-3xl font-semibold ${isPositiveGain ? 'text-green-600' : 'text-red-600'}`}>
-              {isPositiveGain ? '+' : ''}{formatCurrency(totalGain)}
+            <p className={`text-3xl font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              {formatWithSign(formatCurrency(totalGain))}
             </p>
-            <p className={`text-xl font-semibold ${isPositiveGain ? 'text-green-600' : 'text-red-600'}`}>
-              ({isPositiveGain ? '+' : ''}{gainPercent.toFixed(2)}%)
+            <p className={`text-xl font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              ({formatPercentage(gainPercent)})
             </p>
           </div>
         </div>

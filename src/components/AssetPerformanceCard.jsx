@@ -1,14 +1,13 @@
+/**
+ * AssetPerformanceCard component
+ * Displays detailed performance card for a single asset
+ * Includes expandable view with full chart and metrics
+ */
+
 import { useState, useEffect } from 'react'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getAssetHistory, calculateAssetPerformance } from '../lib/portfolioHistory'
+import { formatCurrency, formatShortDate } from '../lib/utils/formatters'
 
 export default function AssetPerformanceCard({ asset, period }) {
   const [history, setHistory] = useState([])
@@ -35,32 +34,16 @@ export default function AssetPerformanceCard({ asset, period }) {
     fetchData()
   }, [asset.id, period])
 
-  // Format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value)
-  }
-
-  // Format date for tooltip
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('fr-FR', { 
-      day: '2-digit', 
-      month: 'short' 
-    })
-  }
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload
+      const date = new Date(data.date)
+      const formattedDate = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
       return (
         <div className="bg-white px-3 py-2 shadow-lg rounded-lg border border-gray-200">
-          <p className="text-xs text-gray-600 mb-1">{formatDate(data.date)}</p>
+          <p className="text-xs text-gray-600 mb-1">{formattedDate}</p>
           <p className="text-sm font-semibold text-gray-900">
             {formatCurrency(data.price)}
           </p>
@@ -215,10 +198,7 @@ export default function AssetPerformanceCard({ asset, period }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="date" 
-                  tickFormatter={(date) => {
-                    const d = new Date(date)
-                    return `${d.getDate()}/${d.getMonth() + 1}`
-                  }}
+                  tickFormatter={formatShortDate}
                   stroke="#9ca3af"
                   style={{ fontSize: '11px' }}
                 />

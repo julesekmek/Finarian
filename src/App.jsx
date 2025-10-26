@@ -1,3 +1,8 @@
+/**
+ * App component - Main application entry point
+ * Handles authentication state and page routing
+ */
+
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Auth from './components/Auth'
@@ -6,6 +11,7 @@ import PortfolioChart from './components/PortfolioChart'
 import AssetList from './components/AssetList'
 import AddAssetForm from './components/AddAssetForm'
 import Performance from './components/Performance'
+import { REALTIME_CHANNELS } from './lib/utils/constants'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -31,7 +37,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Function to fetch assets - can be called from Header after price update
+  // Fetch assets for Header totals
   const fetchAssets = async () => {
     if (!user) {
       setAssets([])
@@ -51,7 +57,7 @@ export default function App() {
     }
   }
 
-  // Fetch assets to calculate total wealth
+  // Fetch assets and subscribe to realtime updates for Header
   useEffect(() => {
     if (!user) {
       setAssets([])
@@ -60,13 +66,15 @@ export default function App() {
 
     fetchAssets()
 
-    // Subscribe to realtime changes for total wealth update
+    // Subscribe to realtime changes for Header totals
+    // AssetList has its own subscription for list updates
     const channel = supabase
-      .channel('assets-for-wealth')
+      .channel(`${REALTIME_CHANNELS.ASSETS}-header`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'assets' },
+        { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${user.id}` },
         () => {
+          // Only refetch for Header calculations
           fetchAssets()
         }
       )

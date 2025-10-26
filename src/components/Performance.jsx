@@ -1,9 +1,17 @@
+/**
+ * Performance component
+ * Displays detailed performance analysis for all assets
+ * Includes comparison and sorting capabilities
+ */
+
 import { useState, useEffect } from 'react'
 import AssetPerformanceCard from './AssetPerformanceCard'
 import { getAllAssetsHistory, calculateAssetPerformance } from '../lib/portfolioHistory'
+import { formatCurrency } from '../lib/utils/formatters'
+import { DEFAULT_PERIOD, CHART_PERIODS } from '../lib/utils/constants'
 
 export default function Performance({ userId, assets }) {
-  const [period, setPeriod] = useState(30)
+  const [period, setPeriod] = useState(DEFAULT_PERIOD)
   const [sortBy, setSortBy] = useState('performance') // performance, name, value
   const [sortDirection, setSortDirection] = useState('desc')
   const [assetsWithMetrics, setAssetsWithMetrics] = useState([])
@@ -115,16 +123,6 @@ export default function Performance({ userId, assets }) {
     return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
   })
 
-  // Format currency
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-
   // Toggle sort direction
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy) {
@@ -181,12 +179,12 @@ export default function Performance({ userId, assets }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <p className="text-sm opacity-90 mb-1">Valeur totale</p>
-              <p className="text-2xl font-bold">{formatCurrency(comparison.totalValue)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(comparison.totalValue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
             
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <p className="text-sm opacity-90 mb-1">Investissement total</p>
-              <p className="text-2xl font-bold">{formatCurrency(comparison.totalInvested)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(comparison.totalInvested, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
             
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
@@ -246,21 +244,21 @@ export default function Performance({ userId, assets }) {
           <div>
             <label className="text-sm text-gray-600 mr-3">Période :</label>
             <div className="inline-flex gap-2">
-            {[7, 30, 90].map((days) => (
-              <button
-                key={days}
-                onClick={() => setPeriod(days)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  period === days
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {days}J
-              </button>
-            ))}
+              {Object.values(CHART_PERIODS).map((days) => (
+                <button
+                  key={days}
+                  onClick={() => setPeriod(days)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    period === days
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {days}J
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
           {/* Sort controls */}
           <div>
