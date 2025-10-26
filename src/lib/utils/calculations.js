@@ -94,3 +94,55 @@ export function calculatePercentageChange(oldValue, newValue) {
   return ((newValue - oldValue) / oldValue) * 100
 }
 
+/**
+ * Group assets by category and calculate metrics for each category
+ * @param {Array} assets - Array of asset objects
+ * @returns {Array} Array of category objects with metrics
+ */
+export function calculateCategoryMetrics(assets) {
+  if (!assets || assets.length === 0) {
+    return []
+  }
+
+  // Group assets by category
+  const categoryData = assets.reduce((acc, asset) => {
+    const category = asset.category || 'Sans catégorie'
+    
+    if (!acc[category]) {
+      acc[category] = {
+        name: category,
+        assets: [],
+        totalInvested: 0,
+        totalCurrent: 0,
+        totalGain: 0,
+        gainPercent: 0,
+        assetCount: 0,
+      }
+    }
+
+    const metrics = calculateAssetMetrics(asset)
+    acc[category].assets.push(asset)
+    acc[category].totalInvested += metrics.totalPurchaseValue
+    acc[category].totalCurrent += metrics.totalCurrentValue
+    acc[category].totalGain += metrics.unrealizedGain
+    acc[category].assetCount += 1
+
+    return acc
+  }, {})
+
+  // Calculate gain percentages and round values
+  Object.values(categoryData).forEach(cat => {
+    cat.gainPercent = cat.totalInvested > 0 
+      ? (cat.totalGain / cat.totalInvested) * 100 
+      : 0
+    cat.totalInvested = roundToDecimals(cat.totalInvested)
+    cat.totalCurrent = roundToDecimals(cat.totalCurrent)
+    cat.totalGain = roundToDecimals(cat.totalGain)
+    cat.gainPercent = roundToDecimals(cat.gainPercent)
+    cat.isPositive = cat.totalGain >= 0
+  })
+
+  // Convert to array and sort by current value descending
+  return Object.values(categoryData).sort((a, b) => b.totalCurrent - a.totalCurrent)
+}
+

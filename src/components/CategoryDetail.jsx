@@ -1,31 +1,37 @@
 /**
  * CategoryDetail component - Page détail d'une catégorie
  * Affiche les actifs d'une catégorie spécifique avec leurs performances
+ * 
+ * @param {string} categoryName - Nom de la catégorie à afficher
+ * @param {Array} assets - Liste complète des actifs
+ * @param {Function} onBack - Callback pour retourner à la vue précédente
  */
 
 import { motion } from 'framer-motion'
 import { ArrowLeft, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
-import { formatCurrency } from '../lib/utils/formatters'
-import { calculateAssetMetrics } from '../lib/utils/calculations'
+import { formatCurrency, formatDate } from '../lib/utils/formatters'
+import { calculateAssetMetrics, calculateCategoryMetrics } from '../lib/utils/calculations'
 
 export default function CategoryDetail({ categoryName, assets, onBack }) {
-  // Filtrer les actifs de cette catégorie
+  // Filter assets for this category
   const categoryAssets = assets.filter(asset => asset.category === categoryName)
 
-  // Calculer les totaux de la catégorie
-  const categoryTotals = categoryAssets.reduce((acc, asset) => {
-    const metrics = calculateAssetMetrics(asset)
-    return {
-      totalInvested: acc.totalInvested + metrics.totalPurchaseValue,
-      totalCurrent: acc.totalCurrent + metrics.totalCurrentValue,
-      totalGain: acc.totalGain + metrics.unrealizedGain,
-    }
-  }, { totalInvested: 0, totalCurrent: 0, totalGain: 0 })
+  // Calculate category totals using centralized utility
+  const categoryMetrics = calculateCategoryMetrics(categoryAssets)[0] || {
+    totalInvested: 0,
+    totalCurrent: 0,
+    totalGain: 0,
+    gainPercent: 0,
+    isPositive: false
+  }
 
-  const gainPercent = categoryTotals.totalInvested > 0 
-    ? (categoryTotals.totalGain / categoryTotals.totalInvested) * 100 
-    : 0
-  const isPositive = gainPercent >= 0
+  const { totalInvested, totalCurrent, totalGain, gainPercent, isPositive } = categoryMetrics
+
+  // Enrich assets with their individual metrics
+  const enrichedAssets = categoryAssets.map(asset => ({
+    ...asset,
+    metrics: calculateAssetMetrics(asset)
+  }))
 
   return (
     <div className="space-y-6">
@@ -52,29 +58,29 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
           <div className="bg-dark-hover rounded-xl p-4">
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">Investi</p>
             <p className="text-2xl font-bold text-text-secondary">
-              {formatCurrency(categoryTotals.totalInvested)}
+              {formatCurrency(totalInvested)}
             </p>
           </div>
 
           <div className="bg-dark-hover rounded-xl p-4">
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">Valeur actuelle</p>
             <p className="text-2xl font-bold text-text-primary">
-              {formatCurrency(categoryTotals.totalCurrent)}
+              {formatCurrency(totalCurrent)}
             </p>
           </div>
 
           <div className="bg-dark-hover rounded-xl p-4">
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">Variation</p>
             <div className="flex items-center gap-1">
-              {categoryTotals.totalGain >= 0 ? (
+              {isPositive ? (
                 <TrendingUp className="w-4 h-4 text-accent-green" />
               ) : (
                 <TrendingDown className="w-4 h-4 text-accent-red" />
               )}
               <p className={`text-2xl font-bold ${
-                categoryTotals.totalGain >= 0 ? 'text-accent-green' : 'text-accent-red'
+                isPositive ? 'text-accent-green' : 'text-accent-red'
               }`}>
-                {categoryTotals.totalGain >= 0 ? '+' : ''}{formatCurrency(categoryTotals.totalGain)}
+                {isPositive ? '+' : ''}{formatCurrency(totalGain)}
               </p>
             </div>
           </div>
@@ -106,12 +112,12 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
       >
         <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
           <Wallet className="w-6 h-6 text-accent-primary" />
-          Actifs ({categoryAssets.length})
+          Actifs ({enrichedAssets.length})
         </h2>
 
         <div className="space-y-3">
-          {categoryAssets.map((asset, index) => {
-            const metrics = calculateAssetMetrics(asset)
+          {enrichedAssets.map((asset, index) => {
+            const { metrics } = asset
 
             return (
               <motion.div

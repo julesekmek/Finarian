@@ -9,7 +9,6 @@ import { Loader2 } from 'lucide-react'
 import { supabase } from './lib/supabaseClient'
 import Auth from './components/Auth'
 import Sidebar from './components/Sidebar'
-import Header from './components/Header'
 import PortfolioChart from './components/PortfolioChart'
 import AddAssetForm from './components/AddAssetForm'
 import Performance from './components/Performance'
@@ -141,12 +140,6 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 md:ml-60">
-        {/* Header */}
-        <Header 
-          onPricesUpdated={fetchAssets}
-          userEmail={user.email}
-        />
-
         {/* Page Content */}
         <main className="flex-1 px-4 md:px-8 py-6 w-full pt-20 md:pt-6">
           <div className="max-w-7xl mx-auto w-full">

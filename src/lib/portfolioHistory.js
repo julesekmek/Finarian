@@ -1,12 +1,19 @@
+/**
+ * Portfolio History Management
+ * Handles fetching and calculating portfolio evolution data from asset_history table
+ * Provides aggregated views of portfolio performance over time
+ */
+
 import { supabase } from './supabaseClient'
 
 /**
  * Fetch portfolio value history for a given period
- * Returns daily snapshots of total portfolio value
+ * Returns daily snapshots of total portfolio value by aggregating all assets
  * 
- * @param {string} userId - User ID
+ * @param {string} userId - User ID from auth
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
- * @returns {Promise<Array>} Array of {date, value} objects
+ * @returns {Promise<Array<{date: string, value: number}>>} Array of daily portfolio values
+ * @throws {Error} If database query fails
  */
 export async function getPortfolioHistory(userId, days = 30) {
   try {

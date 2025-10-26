@@ -1,48 +1,19 @@
 /**
  * CategoryEvolution component - Affiche l'évolution par catégories
  * Cartes cliquables pour chaque catégorie avec ses métriques
+ * 
+ * @param {Array} assets - Liste des actifs de l'utilisateur
+ * @param {Function} onCategoryClick - Callback appelé lors du clic sur une catégorie
  */
 
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '../lib/utils/formatters'
+import { calculateCategoryMetrics } from '../lib/utils/calculations'
 
 export default function CategoryEvolution({ assets, onCategoryClick }) {
-  // Grouper les actifs par catégorie et calculer les totaux
-  const categoryData = assets.reduce((acc, asset) => {
-    const category = asset.category || 'Sans catégorie'
-    
-    if (!acc[category]) {
-      acc[category] = {
-        name: category,
-        totalInvested: 0,
-        totalCurrent: 0,
-        totalGain: 0,
-        gainPercent: 0,
-        assetCount: 0,
-      }
-    }
-
-    const invested = asset.quantity * asset.purchase_price
-    const current = asset.quantity * asset.current_price
-    
-    acc[category].totalInvested += invested
-    acc[category].totalCurrent += current
-    acc[category].totalGain += (current - invested)
-    acc[category].assetCount += 1
-
-    return acc
-  }, {})
-
-  // Calculer les pourcentages de gain
-  Object.values(categoryData).forEach(cat => {
-    if (cat.totalInvested > 0) {
-      cat.gainPercent = (cat.totalGain / cat.totalInvested) * 100
-    }
-  })
-
-  // Convertir en array et trier par valeur décroissante
-  const categories = Object.values(categoryData).sort((a, b) => b.totalCurrent - a.totalCurrent)
+  // Calculate category metrics using centralized utility
+  const categories = calculateCategoryMetrics(assets)
 
   if (categories.length === 0) {
     return null
