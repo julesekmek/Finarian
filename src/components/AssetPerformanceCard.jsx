@@ -107,7 +107,7 @@ export default function AssetPerformanceCard({ asset, period }) {
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold text-text-primary text-lg">{asset.name}</h3>
               {asset.symbol && (
-                        <span className="text-xs bg-accent-beige/20 text-gray-700 px-2 py-1 rounded-lg font-mono">
+                        <span className="text-xs bg-accent-beige/20 text-white px-2 py-1 rounded-lg font-mono">
                   {asset.symbol}
                 </span>
               )}

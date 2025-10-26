@@ -179,7 +179,7 @@ export default function AssetList({ userId }) {
                           {asset.name}
                         </h3>
                         {asset.symbol && (
-                          <span className="text-xs bg-accent-beige/20 text-gray-700 px-2 py-1 rounded-lg font-mono">
+                          <span className="text-xs bg-accent-beige/20 text-white px-2 py-1 rounded-lg font-mono">
                             {asset.symbol}
                           </span>
                         )}
