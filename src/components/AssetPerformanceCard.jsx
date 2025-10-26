@@ -192,8 +192,8 @@ export default function AssetPerformanceCard({ asset, period }) {
               </div>
             </div>
 
-            {/* Full chart */}
-            <div className="h-56 min-h-[224px] bg-dark-hover rounded-xl p-3">
+            {/* Full chart - Hidden on mobile */}
+            <div className="h-56 min-h-[224px] bg-dark-hover rounded-xl p-3 hidden md:block">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />

@@ -273,12 +273,12 @@ export default function PortfolioChart({ userId }) {
         </div>
       )}
 
-      {/* Chart */}
+      {/* Chart - Hidden on mobile */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="w-full h-80 min-h-[320px]"
+        className="w-full h-80 min-h-[320px] hidden md:block"
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>

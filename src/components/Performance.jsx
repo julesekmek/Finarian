@@ -191,12 +191,10 @@ export default function Performance({ userId, assets }) {
         className="card"
       >
         {/* Title */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-accent-primary rounded-xl flex items-center justify-center">
-            <BarChart3 className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-text-primary">Performance des actifs</h2>
-        </div>
+        <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+          <BarChart3 className="w-6 h-6 text-accent-primary" />
+          Performance des actifs
+        </h2>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
