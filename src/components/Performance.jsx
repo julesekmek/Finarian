@@ -268,8 +268,8 @@ export default function Performance({ userId, assets }) {
         </div>
       </motion.div>
 
-      {/* Assets grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Assets grid - Full width for better visibility */}
+      <div className="grid grid-cols-1 gap-4">
         {sortedAssets.map((asset, index) => (
           <motion.div
             key={asset.id}
@@ -287,7 +287,7 @@ export default function Performance({ userId, assets }) {
 
       {/* Footer stats */}
       <div className="text-center text-sm text-text-muted">
-        {assetsWithMetrics.length} actif{assetsWithMetrics.length > 1 ? 's' : ''} avec historique • {period} jours
+        {assetsWithMetrics.length} actif{assetsWithMetrics.length > 1 ? 's' : ''} avec historique • {period === 'all' ? 'Toutes les données' : `${period} jours`}
       </div>
     </div>
   )

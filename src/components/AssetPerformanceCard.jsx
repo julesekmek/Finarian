@@ -132,7 +132,7 @@ export default function AssetPerformanceCard({ asset, period }) {
             </p>
           </div>
           <div className="bg-dark-hover rounded-xl p-3">
-            <p className="text-xs text-text-muted mb-1">Variation ({period}J)</p>
+            <p className="text-xs text-text-muted mb-1">Variation ({period === 'all' ? 'Tout' : `${period}J`})</p>
             <div className="flex items-center gap-1">
               {isPositive ? (
                 <TrendingUp className="w-4 h-4 text-accent-green" />
@@ -239,31 +239,6 @@ export default function AssetPerformanceCard({ asset, period }) {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-
-            {/* Performance summary */}
-            <div className="bg-gradient-to-r from-accent-green/10 to-accent-blue/10 border border-accent-green/20 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-text-primary mb-1">
-                    Performance sur {period} jours
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    {metrics.dataPoints} points de données
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${
-                    metrics.valueChangePercent >= 0 ? 'text-accent-green' : 'text-accent-red'
-                  }`}>
-                    {metrics.valueChangePercent >= 0 ? '+' : ''}
-                    {metrics.valueChangePercent.toFixed(2)}%
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    de {formatCurrency(metrics.investedValue)} investi
-                  </p>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
