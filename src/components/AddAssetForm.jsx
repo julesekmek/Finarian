@@ -51,17 +51,58 @@ export default function AddAssetForm({ userId }) {
     setError('')
 
     try {
-      const { error: insertError } = await supabase.from('assets').insert({
-        name: name.trim(),
-        category: category.trim(),
-        symbol: symbol.trim() || null,
-        quantity: numericQuantity,
-        purchase_price: numericPurchasePrice,
-        current_price: numericCurrentPrice,
-        user_id: userId,
-      })
+      const { data: newAsset, error: insertError } = await supabase
+        .from('assets')
+        .insert({
+          name: name.trim(),
+          category: category.trim(),
+          symbol: symbol.trim() || null,
+          quantity: numericQuantity,
+          purchase_price: numericPurchasePrice,
+          current_price: numericCurrentPrice,
+          user_id: userId,
+        })
+        .select()
+        .single()
 
       if (insertError) throw insertError
+
+      // 🎯 Fetch historical data if symbol is provided
+      if (symbol.trim() && newAsset) {
+        console.log(`Fetching historical data for ${symbol.trim()}...`)
+        
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session) {
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-historical-prices`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  assetId: newAsset.id,
+                  symbol: symbol.trim()
+                })
+              }
+            )
+
+            const result = await response.json()
+            
+            if (result.success) {
+              console.log(`✓ Historical data imported: ${result.inserted} points`)
+            } else {
+              console.warn('Historical data import failed:', result.message)
+            }
+          } catch (historyError) {
+            // Don't fail the whole operation if history fetch fails
+            console.error('Failed to fetch historical data:', historyError)
+          }
+        }
+      }
 
       // Reset form and close modal
       setName('')
