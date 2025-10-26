@@ -13,6 +13,7 @@ import PortfolioChart from './components/PortfolioChart'
 import AddAssetForm from './components/AddAssetForm'
 import Performance from './components/Performance'
 import CategoryEvolution from './components/CategoryEvolution'
+import CategoryPieChart from './components/CategoryPieChart'
 import CategoryDetail from './components/CategoryDetail'
 import { REALTIME_CHANNELS } from './lib/utils/constants'
 
@@ -157,8 +158,8 @@ export default function App() {
                   {/* Portfolio Chart */}
                   <PortfolioChart userId={user.id} />
                   
-                  {/* Category Evolution */}
-                  <CategoryEvolution assets={assets} onCategoryClick={handleCategoryClick} />
+                  {/* Category Pie Chart - Dashboard Only */}
+                  <CategoryPieChart assets={assets} onCategoryClick={handleCategoryClick} />
 
                   {/* Floating Add Button */}
                   <AddAssetForm userId={user.id} />
