@@ -117,23 +117,28 @@ export function calculatePerformanceMetrics(history) {
  * Returns daily price snapshots for a single asset
  * 
  * @param {string} assetId - Asset ID
- * @param {number} days - Number of days to fetch
+ * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Array>} Array of {date, price} objects
  */
 export async function getAssetHistory(assetId, days = 30) {
   try {
-    // Calculate the start date
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
-    const startDateStr = startDate.toISOString().split('T')[0]
-
-    // Fetch asset history for the period
-    const { data, error } = await supabase
+    // Build the query
+    let query = supabase
       .from('asset_history')
       .select('date, price')
       .eq('asset_id', assetId)
-      .gte('date', startDateStr)
       .order('date', { ascending: true })
+
+    // If days is not 'all', filter by date
+    if (days !== 'all') {
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+      const startDateStr = startDate.toISOString().split('T')[0]
+      query = query.gte('date', startDateStr)
+    }
+
+    // Fetch asset history for the period
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -155,23 +160,28 @@ export async function getAssetHistory(assetId, days = 30) {
  * Returns an object with asset_id as keys and history arrays as values
  * 
  * @param {string} userId - User ID
- * @param {number} days - Number of days to fetch
+ * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Object>} Object with assetId -> [{date, price}] mapping
  */
 export async function getAllAssetsHistory(userId, days = 30) {
   try {
-    // Calculate the start date
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
-    const startDateStr = startDate.toISOString().split('T')[0]
-
-    // Fetch asset history for the period
-    const { data, error } = await supabase
+    // Build the query
+    let query = supabase
       .from('asset_history')
       .select('date, price, asset_id')
       .eq('user_id', userId)
-      .gte('date', startDateStr)
       .order('date', { ascending: true })
+
+    // If days is not 'all', filter by date
+    if (days !== 'all') {
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+      const startDateStr = startDate.toISOString().split('T')[0]
+      query = query.gte('date', startDateStr)
+    }
+
+    // Fetch asset history for the period
+    const { data, error } = await query
 
     if (error) throw error
 

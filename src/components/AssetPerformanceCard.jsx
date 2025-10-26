@@ -148,23 +148,6 @@ export default function AssetPerformanceCard({ asset, period }) {
         </div>
       </div>
 
-      {/* Mini chart (always visible) */}
-      {!expanded && (
-        <div className="h-20 min-h-[80px] mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={history}>
-              <Line 
-                type="monotone" 
-                dataKey="price" 
-                stroke={trendColor}
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
       {/* Expanded view */}
       <AnimatePresence>
         {expanded && (
