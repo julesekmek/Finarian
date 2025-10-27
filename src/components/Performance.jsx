@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, ArrowUpDown, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown, ArrowUpDown, BarChart3, Search } from 'lucide-react'
 import AssetPerformanceCard from './AssetPerformanceCard'
 import { getAllAssetsHistory, calculateAssetPerformance } from '../lib/portfolioHistory'
 import { formatCurrency } from '../lib/utils/formatters'
@@ -15,6 +15,7 @@ export default function Performance({ userId, assets }) {
   const [period, setPeriod] = useState(DEFAULT_PERIOD)
   const [sortBy, setSortBy] = useState('performance')
   const [sortDirection, setSortDirection] = useState('desc')
+  const [searchQuery, setSearchQuery] = useState('')
   const [assetsWithMetrics, setAssetsWithMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [comparison, setComparison] = useState(null)
@@ -92,8 +93,20 @@ export default function Performance({ userId, assets }) {
     })
   }
 
-  // Sort assets
-  const sortedAssets = [...assetsWithMetrics].sort((a, b) => {
+  // Filter assets by search query
+  const filteredAssets = assetsWithMetrics.filter(asset => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase()
+    const matchesName = asset.name.toLowerCase().includes(query)
+    const matchesSymbol = asset.symbol?.toLowerCase().includes(query)
+    const matchesCategory = asset.category?.toLowerCase().includes(query)
+    
+    return matchesName || matchesSymbol || matchesCategory
+  })
+
+  // Sort filtered assets
+  const sortedAssets = [...filteredAssets].sort((a, b) => {
     let aValue, bValue
 
     switch (sortBy) {
@@ -196,6 +209,28 @@ export default function Performance({ userId, assets }) {
           Performance des actifs
         </h2>
 
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Rechercher un actif (nom, symbole, catégorie)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-dark-hover border border-border-subtle rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary text-sm"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Period selector */}
@@ -283,9 +318,26 @@ export default function Performance({ userId, assets }) {
         ))}
       </div>
 
+      {/* Empty search results */}
+      {searchQuery && sortedAssets.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card text-center py-12"
+        >
+          <Search className="w-12 h-12 text-text-muted mx-auto mb-4" />
+          <p className="text-lg text-text-secondary mb-2">Aucun résultat</p>
+          <p className="text-sm text-text-muted">
+            Aucun actif ne correspond à "{searchQuery}"
+          </p>
+        </motion.div>
+      )}
+
       {/* Footer stats */}
       <div className="text-center text-sm text-text-muted">
-        {assetsWithMetrics.length} actif{assetsWithMetrics.length > 1 ? 's' : ''} avec historique • {period === 'all' ? 'Toutes les données' : `${period} jours`}
+        {sortedAssets.length} actif{sortedAssets.length > 1 ? 's' : ''} affiché{sortedAssets.length > 1 ? 's' : ''}
+        {searchQuery && ` (sur ${assetsWithMetrics.length} avec historique)`}
+        {!searchQuery && ' avec historique'} • {period === 'all' ? 'Toutes les données' : `${period} jours`}
       </div>
     </div>
   )

@@ -7,8 +7,55 @@
 import { supabase } from './supabaseClient'
 
 /**
+ * Fetch ALL records from asset_history using pagination to bypass Supabase 1000 limit
+ * 
+ * @param {string} userId - User ID from auth
+ * @param {string} startDateStr - Optional start date filter (ISO format YYYY-MM-DD)
+ * @returns {Promise<Array>} All history records
+ */
+async function fetchAllAssetHistory(userId, startDateStr = null) {
+  const BATCH_SIZE = 1000
+  let allData = []
+  let offset = 0
+  let hasMore = true
+
+  while (hasMore) {
+    let query = supabase
+      .from('asset_history')
+      .select('date, price, asset_id')
+      .eq('user_id', userId)
+      .order('date', { ascending: true })
+      .range(offset, offset + BATCH_SIZE - 1)
+
+    // Apply date filter if provided
+    if (startDateStr) {
+      query = query.gte('date', startDateStr)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    if (data && data.length > 0) {
+      allData = allData.concat(data)
+      offset += BATCH_SIZE
+      
+      // If we got less than BATCH_SIZE, we've reached the end
+      if (data.length < BATCH_SIZE) {
+        hasMore = false
+      }
+    } else {
+      hasMore = false
+    }
+  }
+
+  return allData
+}
+
+/**
  * Fetch portfolio value history for a given period
  * Returns daily snapshots of total portfolio value by aggregating all assets
+ * Now supports fetching ALL data (>1000 records) via pagination
  * 
  * @param {string} userId - User ID from auth
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
@@ -17,25 +64,16 @@ import { supabase } from './supabaseClient'
  */
 export async function getPortfolioHistory(userId, days = 30) {
   try {
-    // Build the query
-    let query = supabase
-      .from('asset_history')
-      .select('date, price, asset_id')
-      .eq('user_id', userId)
-      .order('date', { ascending: true })
-
-    // If days is not 'all', filter by date
+    // Calculate start date if needed
+    let startDateStr = null
     if (days !== 'all') {
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
-      const startDateStr = startDate.toISOString().split('T')[0]
-      query = query.gte('date', startDateStr)
+      startDateStr = startDate.toISOString().split('T')[0]
     }
 
-    // Fetch asset history for the period
-    const { data: historyData, error: historyError } = await query
-
-    if (historyError) throw historyError
+    // Fetch ALL asset history with pagination
+    const historyData = await fetchAllAssetHistory(userId, startDateStr)
 
     // Fetch current assets to get quantities
     const { data: assetsData, error: assetsError } = await supabase
@@ -165,6 +203,7 @@ export async function getAssetHistory(assetId, days = 30) {
 /**
  * Fetch history for all user assets
  * Returns an object with asset_id as keys and history arrays as values
+ * Now supports fetching ALL data (>1000 records) via pagination
  * 
  * @param {string} userId - User ID
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
@@ -172,25 +211,16 @@ export async function getAssetHistory(assetId, days = 30) {
  */
 export async function getAllAssetsHistory(userId, days = 30) {
   try {
-    // Build the query
-    let query = supabase
-      .from('asset_history')
-      .select('date, price, asset_id')
-      .eq('user_id', userId)
-      .order('date', { ascending: true })
-
-    // If days is not 'all', filter by date
+    // Calculate start date if needed
+    let startDateStr = null
     if (days !== 'all') {
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
-      const startDateStr = startDate.toISOString().split('T')[0]
-      query = query.gte('date', startDateStr)
+      startDateStr = startDate.toISOString().split('T')[0]
     }
 
-    // Fetch asset history for the period
-    const { data, error } = await query
-
-    if (error) throw error
+    // Fetch ALL asset history with pagination
+    const data = await fetchAllAssetHistory(userId, startDateStr)
 
     // Group by asset_id
     const assetHistories = {}

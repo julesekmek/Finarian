@@ -9,16 +9,34 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, PieChart as PieChartIcon } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { formatCurrency, formatDate } from '../lib/utils/formatters'
 import { calculateAssetMetrics, calculateCategoryMetrics } from '../lib/utils/calculations'
 import EditAssetModal from './EditAssetModal'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
 
+// Colors for pie chart
+const COLORS = [
+  '#F1C086', // accent-primary
+  '#60A5FA', // blue-400
+  '#34D399', // green-400
+  '#F87171', // red-400
+  '#A78BFA', // purple-400
+  '#FBBF24', // yellow-400
+  '#FB923C', // orange-400
+  '#EC4899', // pink-400
+  '#14B8A6', // teal-400
+  '#F472B6', // pink-300
+]
+
 export default function CategoryDetail({ categoryName, assets, onBack }) {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('value')
+  const [sortDirection, setSortDirection] = useState('desc')
 
   // Filter assets for this category
   const categoryAssets = assets.filter(asset => asset.category === categoryName)
@@ -39,6 +57,64 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     ...asset,
     metrics: calculateAssetMetrics(asset)
   }))
+
+  // Prepare data for pie chart - Asset distribution by value
+  const pieChartData = enrichedAssets.map(asset => ({
+    name: asset.name,
+    value: asset.metrics.totalCurrentValue,
+    percentage: totalCurrent > 0 ? (asset.metrics.totalCurrentValue / totalCurrent * 100) : 0
+  })).sort((a, b) => b.value - a.value) // Sort by value descending
+
+  // Filter assets by search query
+  const filteredAssets = enrichedAssets.filter(asset => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase()
+    const matchesName = asset.name.toLowerCase().includes(query)
+    const matchesSymbol = asset.symbol?.toLowerCase().includes(query)
+    
+    return matchesName || matchesSymbol
+  })
+
+  // Sort filtered assets
+  const sortedAssets = [...filteredAssets].sort((a, b) => {
+    let aValue, bValue
+
+    switch (sortBy) {
+      case 'value':
+        aValue = a.metrics.totalCurrentValue
+        bValue = b.metrics.totalCurrentValue
+        break
+      case 'performance':
+        aValue = a.metrics.unrealizedGain
+        bValue = b.metrics.unrealizedGain
+        break
+      case 'quantity':
+        aValue = a.metrics.quantity
+        bValue = b.metrics.quantity
+        break
+      case 'name':
+        aValue = a.name.toLowerCase()
+        bValue = b.name.toLowerCase()
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue)
+      default:
+        return 0
+    }
+
+    return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+  })
+
+  // Toggle sort direction
+  const handleSort = (newSortBy) => {
+    if (sortBy === newSortBy) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(newSortBy)
+      setSortDirection('desc')
+    }
+  }
 
   // Modal handlers
   const handleOpenEdit = (asset) => {
@@ -141,11 +217,101 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
         </div>
       </motion.div>
 
+      {/* Pie Chart - Asset Distribution */}
+      {enrichedAssets.length > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="card"
+        >
+          <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+            <PieChartIcon className="w-6 h-6 text-accent-primary" />
+            Répartition des actifs
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            {/* Pie Chart */}
+            <div className="h-64 md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => percentage > 5 ? `${percentage.toFixed(1)}%` : ''}
+                    outerRadius={80}
+                    innerRadius={50}
+                    fill="#8884d8"
+                    dataKey="value"
+                    animationDuration={800}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length > 0) {
+                        const data = payload[0]
+                        return (
+                          <div className="bg-dark-card border border-border-subtle px-4 py-3 rounded-xl shadow-card">
+                            <p className="text-sm font-semibold text-text-primary mb-1">
+                              {data.payload.name}
+                            </p>
+                            <p className="text-lg font-bold text-accent-primary">
+                              {formatCurrency(data.value)}
+                            </p>
+                            <p className="text-xs text-text-muted">
+                              {data.payload.percentage.toFixed(2)}% de la catégorie
+                            </p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend with values */}
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+              {pieChartData.map((item, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-dark-hover rounded-lg hover:bg-dark-hover/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div 
+                      className="w-4 h-4 rounded flex-shrink-0"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm text-text-primary truncate">
+                      {item.name}
+                    </span>
+                  </div>
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <p className="text-sm font-semibold text-text-primary">
+                      {formatCurrency(item.value)}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {item.percentage.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Assets List */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.15 }}
         className="card"
       >
         <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
@@ -153,8 +319,98 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
           Actifs ({enrichedAssets.length})
         </h2>
 
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Rechercher un actif (nom, symbole)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-dark-hover border border-border-subtle rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary text-sm"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Sort Controls */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <span className="text-sm text-text-secondary font-medium self-center">Trier par :</span>
+          <button
+            onClick={() => handleSort('value')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              sortBy === 'value'
+                ? 'bg-accent-primary text-white shadow-glow-primary'
+                : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+            }`}
+          >
+            Valeur
+            {sortBy === 'value' && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('performance')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              sortBy === 'performance'
+                ? 'bg-accent-primary text-white shadow-glow-primary'
+                : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+            }`}
+          >
+            Performance
+            {sortBy === 'performance' && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('quantity')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              sortBy === 'quantity'
+                ? 'bg-accent-primary text-white shadow-glow-primary'
+                : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+            }`}
+          >
+            Quantité
+            {sortBy === 'quantity' && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('name')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              sortBy === 'name'
+                ? 'bg-accent-primary text-white shadow-glow-primary'
+                : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+            }`}
+          >
+            Nom
+            {sortBy === 'name' && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </button>
+        </div>
+
+        {/* Empty search results */}
+        {searchQuery && sortedAssets.length === 0 && (
+          <div className="text-center py-12">
+            <Search className="w-12 h-12 text-text-muted mx-auto mb-4" />
+            <p className="text-lg text-text-secondary mb-2">Aucun résultat</p>
+            <p className="text-sm text-text-muted">
+              Aucun actif ne correspond à "{searchQuery}"
+            </p>
+          </div>
+        )}
+
         <div className="space-y-3">
-          {enrichedAssets.map((asset, index) => {
+          {sortedAssets.map((asset, index) => {
             const { metrics } = asset
 
             return (
@@ -228,7 +484,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-text-muted mb-1">Plus/Moins-value</p>
-                    <div className="flex items-center gap-1 justify-end">
+                    <div className="flex items-center gap-1 justify-end mb-1">
                       {metrics.isPositive ? (
                         <TrendingUp className="w-5 h-5 text-accent-green" />
                       ) : (
@@ -240,12 +496,25 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                         {metrics.isPositive ? '+' : ''}{formatCurrency(metrics.unrealizedGain)}
                       </p>
                     </div>
+                    <p className={`text-sm font-semibold ${
+                      metrics.isPositive ? 'text-accent-green' : 'text-accent-red'
+                    }`}>
+                      {metrics.isPositive ? '+' : ''}{metrics.gainPercent.toFixed(2)}%
+                    </p>
                   </div>
                 </div>
               </motion.div>
             )
           })}
         </div>
+
+        {/* Footer stats */}
+        {sortedAssets.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-border-subtle text-center text-sm text-text-muted">
+            {sortedAssets.length} actif{sortedAssets.length > 1 ? 's' : ''} affiché{sortedAssets.length > 1 ? 's' : ''}
+            {searchQuery && ` (sur ${enrichedAssets.length} total${enrichedAssets.length > 1 ? 'aux' : ''})`}
+          </div>
+        )}
       </motion.div>
 
       {/* Modals */}
