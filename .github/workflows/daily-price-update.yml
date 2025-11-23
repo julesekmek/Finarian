@@ -4,15 +4,15 @@ name: Daily Price Update
 on:
   # Exécution programmée : tous les jours à 8h UTC (10h Paris en hiver, 9h en été)
   schedule:
-    - cron: '0 8 * * *'  # Format: minute heure jour mois jour_semaine
-  
+    - cron: "0 8 * * *" # Format: minute heure jour mois jour_semaine
+
   # Permet aussi le déclenchement manuel depuis l'interface GitHub
   workflow_dispatch:
 
 jobs:
   update-prices:
     runs-on: ubuntu-latest
-    
+
     steps:
       # Étape 1: Information sur l'exécution
       - name: Print execution time
@@ -20,49 +20,28 @@ jobs:
           echo "🕐 Updating prices at $(date)"
           echo "🌍 Timezone: UTC"
           echo "📍 Paris time: $(TZ=Europe/Paris date)"
-      
-      # Étape 2: Appel de la fonction Supabase Edge
+
+      # Étape 2: Appel de la fonction Supabase Edge avec Service Role Key
       - name: Call Supabase Edge Function
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_USER_EMAIL: ${{ secrets.SUPABASE_USER_EMAIL }}
-          SUPABASE_USER_PASSWORD: ${{ secrets.SUPABASE_USER_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          echo "🔐 Authenticating user..."
-          
-          # Authentification pour obtenir un access token
-          AUTH_RESPONSE=$(curl -s -X POST \
-            "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
-            -H "Content-Type: application/json" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -d "{\"email\":\"${SUPABASE_USER_EMAIL}\",\"password\":\"${SUPABASE_USER_PASSWORD}\"}")
-          
-          # Extraction du token d'accès
-          ACCESS_TOKEN=$(echo $AUTH_RESPONSE | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
-          
-          if [ -z "$ACCESS_TOKEN" ]; then
-            echo "❌ Authentication failed!"
-            echo "Response: $AUTH_RESPONSE"
-            exit 1
-          fi
-          
-          echo "✅ Authentication successful"
-          echo "🔄 Calling update-prices function..."
-          
-          # Appel de la fonction Edge pour mettre à jour les prix
+          echo "🔄 Calling update-prices function with Service Role authentication..."
+
+          # Appel de la fonction Edge pour mettre à jour les prix (tous les utilisateurs)
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
             "${SUPABASE_URL}/functions/v1/update-prices" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json")
-          
+
           # Extraction du code HTTP et du corps de la réponse
           HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
           BODY=$(echo "$RESPONSE" | sed '/HTTP_STATUS/d')
-          
+
           echo "📊 Response status: $HTTP_STATUS"
           echo "📋 Response body: $BODY"
-          
+
           # Vérification du succès
           if [ "$HTTP_STATUS" -eq 200 ]; then
             echo "✅ Prices updated successfully!"
@@ -82,14 +61,14 @@ jobs:
             echo "❌ Price update failed with status $HTTP_STATUS"
             exit 1
           fi
-      
+
       # Étape 3: Notification de succès
       - name: Success notification
         if: success()
         run: |
           echo "🎉 Daily price update completed successfully!"
           echo "📅 Next update scheduled for tomorrow at 8:00 UTC"
-      
+
       # Étape 4: Notification d'échec
       - name: Failure notification
         if: failure()
@@ -97,4 +76,3 @@ jobs:
           echo "💥 Daily price update failed!"
           echo "🔍 Check the logs above for details"
           echo "⚠️ You may need to update prices manually today"
-
