@@ -407,7 +407,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
       </motion.div>
 
       {/* Pie Charts - Region and Sector Distribution */}
-      {enrichedAssets.length > 0 && (
+      {categoryName !== "Epargne" && enrichedAssets.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Region Chart */}
           <motion.div
