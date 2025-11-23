@@ -3,79 +3,79 @@
  * Smooth animations and clean design
  */
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { X, Save, Loader2 } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { X, Save, Loader2 } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function EditAssetModal({ asset, onClose, onSave }) {
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [symbol, setSymbol] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [purchasePrice, setPurchasePrice] = useState('')
-  const [currentPrice, setCurrentPrice] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Pre-fill form with asset data
   useEffect(() => {
     if (asset) {
-      setName(asset.name || '')
-      setCategory(asset.category || '')
-      setSymbol(asset.symbol || '')
-      setQuantity(asset.quantity?.toString() || '0')
-      setPurchasePrice(asset.purchase_price?.toString() || '0')
-      setCurrentPrice(asset.current_price?.toString() || '0')
+      setName(asset.name || "");
+      setCategory(asset.category || "");
+      setSymbol(asset.symbol || "");
+      setQuantity(asset.quantity?.toString() || "0");
+      setPurchasePrice(asset.purchase_price?.toString() || "0");
+      setCurrentPrice(asset.current_price?.toString() || "0");
     }
-  }, [asset])
+  }, [asset]);
 
   // Handle ESC key to close
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && !loading) {
-        onClose()
+      if (e.key === "Escape" && !loading) {
+        onClose();
       }
-    }
-    
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [onClose, loading])
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose, loading]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     // Validate inputs
     if (!name.trim() || !category.trim()) {
-      setError('Le nom et la catégorie sont requis')
-      return
+      setError("Le nom et la catégorie sont requis");
+      return;
     }
 
-    const numericQuantity = parseFloat(quantity)
-    const numericPurchasePrice = parseFloat(purchasePrice)
-    const numericCurrentPrice = parseFloat(currentPrice)
+    const numericQuantity = parseFloat(quantity);
+    const numericPurchasePrice = parseFloat(purchasePrice);
+    const numericCurrentPrice = parseFloat(currentPrice);
 
     if (isNaN(numericQuantity) || numericQuantity < 0) {
-      setError('Veuillez entrer une quantité valide')
-      return
+      setError("Veuillez entrer une quantité valide");
+      return;
     }
 
     if (isNaN(numericPurchasePrice) || numericPurchasePrice < 0) {
-      setError('Veuillez entrer un prix d\'achat valide')
-      return
+      setError("Veuillez entrer un prix d'achat valide");
+      return;
     }
 
     if (isNaN(numericCurrentPrice) || numericCurrentPrice < 0) {
-      setError('Veuillez entrer un prix actuel valide')
-      return
+      setError("Veuillez entrer un prix actuel valide");
+      return;
     }
 
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
       const { data, error: updateError } = await supabase
-        .from('assets')
+        .from("assets")
         .update({
           name: name.trim(),
           category: category.trim(),
@@ -85,42 +85,91 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
           current_price: numericCurrentPrice,
           last_updated: new Date().toISOString(),
         })
-        .eq('id', asset.id)
-        .select()
+        .eq("id", asset.id)
+        .select();
 
-      if (updateError) throw updateError
+      if (updateError) throw updateError;
 
-      const updatedAsset = (data && data.length > 0) ? data[0] : {
-        ...asset,
-        name: name.trim(),
-        category: category.trim(),
-        symbol: symbol.trim() || null,
-        quantity: numericQuantity,
-        purchase_price: numericPurchasePrice,
-        current_price: numericCurrentPrice,
-        last_updated: new Date().toISOString(),
+      const updatedAsset =
+        data && data.length > 0
+          ? data[0]
+          : {
+              ...asset,
+              name: name.trim(),
+              category: category.trim(),
+              symbol: symbol.trim() || null,
+              quantity: numericQuantity,
+              purchase_price: numericPurchasePrice,
+              current_price: numericCurrentPrice,
+              last_updated: new Date().toISOString(),
+            };
+
+      // 🎯 Backfill historical data (YTD from 2025-01-02)
+      // This updates the entire YTD history with new values
+      console.log(
+        `Backfilling YTD historical data for ${updatedAsset.name}...`
+      );
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        try {
+          // Prepare request body based on asset type
+          const body = symbol.trim()
+            ? { assetId: asset.id, symbol: symbol.trim() }
+            : { assetId: asset.id, referencePrice: numericCurrentPrice };
+
+          const response = await fetch(
+            `${
+              import.meta.env.VITE_SUPABASE_URL
+            }/functions/v1/fetch-historical-prices`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+            }
+          );
+
+          const result = await response.json();
+
+          if (result.success) {
+            console.log(
+              `✓ Historical data backfilled: ${result.inserted} points (${result.source})`
+            );
+          } else {
+            console.warn("Historical data backfill failed:", result.message);
+          }
+        } catch (historyError) {
+          // Don't fail the whole operation if history fetch fails
+          console.error("Failed to backfill historical data:", historyError);
+        }
       }
 
       if (onSave) {
-        onSave(updatedAsset)
+        onSave(updatedAsset);
       }
 
-      onClose()
+      onClose();
     } catch (err) {
-      console.error('Error updating asset:', err)
-      setError(err.message || 'Erreur lors de la mise à jour')
+      console.error("Error updating asset:", err);
+      setError(err.message || "Erreur lors de la mise à jour");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !loading) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
-  if (!asset) return null
+  if (!asset) return null;
 
   return (
     <>
@@ -191,7 +240,8 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
             {/* Symbol */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Symbole Yahoo Finance <span className="text-text-muted text-xs">(optionnel)</span>
+                Symbole Yahoo Finance{" "}
+                <span className="text-text-muted text-xs">(optionnel)</span>
               </label>
               <input
                 type="text"
@@ -289,5 +339,5 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         </motion.div>
       </div>
     </>
-  )
+  );
 }

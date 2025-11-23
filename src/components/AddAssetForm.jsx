@@ -3,56 +3,61 @@
  * Minimalist design with smooth animations
  */
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Loader2 } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, X, Loader2 } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function AddAssetForm({ userId }) {
-  const [showModal, setShowModal] = useState(false)
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [symbol, setSymbol] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [purchasePrice, setPurchasePrice] = useState('')
-  const [currentPrice, setCurrentPrice] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     // Validate inputs
     if (!name.trim() || !category.trim() || !quantity || !purchasePrice) {
-      setError('Veuillez remplir tous les champs requis')
-      return
+      setError("Veuillez remplir tous les champs requis");
+      return;
     }
 
-    const numericQuantity = parseFloat(quantity)
-    const numericPurchasePrice = parseFloat(purchasePrice)
-    const numericCurrentPrice = currentPrice ? parseFloat(currentPrice) : numericPurchasePrice
+    const numericQuantity = parseFloat(quantity);
+    const numericPurchasePrice = parseFloat(purchasePrice);
+    const numericCurrentPrice = currentPrice
+      ? parseFloat(currentPrice)
+      : numericPurchasePrice;
 
     if (isNaN(numericQuantity) || numericQuantity <= 0) {
-      setError('Veuillez entrer une quantité valide')
-      return
+      setError("Veuillez entrer une quantité valide");
+      return;
     }
 
     if (isNaN(numericPurchasePrice) || numericPurchasePrice < 0) {
-      setError('Veuillez entrer un prix d\'achat valide')
-      return
+      setError("Veuillez entrer un prix d'achat valide");
+      return;
     }
 
-    if (currentPrice && (isNaN(numericCurrentPrice) || numericCurrentPrice < 0)) {
-      setError('Veuillez entrer un prix actuel valide')
-      return
+    if (
+      currentPrice &&
+      (isNaN(numericCurrentPrice) || numericCurrentPrice < 0)
+    ) {
+      setError("Veuillez entrer un prix actuel valide");
+      return;
     }
 
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
       const { data: newAsset, error: insertError } = await supabase
-        .from('assets')
+        .from("assets")
         .insert({
           name: name.trim(),
           category: category.trim(),
@@ -63,69 +68,77 @@ export default function AddAssetForm({ userId }) {
           user_id: userId,
         })
         .select()
-        .single()
+        .single();
 
-      if (insertError) throw insertError
+      if (insertError) throw insertError;
 
-      // 🎯 Fetch historical data if symbol is provided
-      if (symbol.trim() && newAsset) {
-        console.log(`Fetching historical data for ${symbol.trim()}...`)
-        
-        const { data: { session } } = await supabase.auth.getSession()
-        
+      // 🎯 Backfill historical data (YTD from 2025-01-02)
+      if (newAsset) {
+        console.log(`Backfilling YTD historical data for ${newAsset.name}...`);
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session) {
           try {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-historical-prices`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  assetId: newAsset.id,
-                  symbol: symbol.trim()
-                })
-              }
-            )
+            // Prepare request body based on asset type
+            const body = symbol.trim()
+              ? { assetId: newAsset.id, symbol: symbol.trim() }
+              : { assetId: newAsset.id, referencePrice: numericCurrentPrice };
 
-            const result = await response.json()
-            
+            const response = await fetch(
+              `${
+                import.meta.env.VITE_SUPABASE_URL
+              }/functions/v1/fetch-historical-prices`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+              }
+            );
+
+            const result = await response.json();
+
             if (result.success) {
-              console.log(`✓ Historical data imported: ${result.inserted} points`)
+              console.log(
+                `✓ Historical data backfilled: ${result.inserted} points (${result.source})`
+              );
             } else {
-              console.warn('Historical data import failed:', result.message)
+              console.warn("Historical data backfill failed:", result.message);
             }
           } catch (historyError) {
             // Don't fail the whole operation if history fetch fails
-            console.error('Failed to fetch historical data:', historyError)
+            console.error("Failed to backfill historical data:", historyError);
           }
         }
       }
 
       // Reset form and close modal
-      setName('')
-      setCategory('')
-      setSymbol('')
-      setQuantity('')
-      setPurchasePrice('')
-      setCurrentPrice('')
-      setShowModal(false)
+      setName("");
+      setCategory("");
+      setSymbol("");
+      setQuantity("");
+      setPurchasePrice("");
+      setCurrentPrice("");
+      setShowModal(false);
     } catch (err) {
-      console.error('Error adding asset:', err)
-      setError(err.message || 'Échec de l\'ajout de l\'actif')
+      console.error("Error adding asset:", err);
+      setError(err.message || "Échec de l'ajout de l'actif");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleClose = () => {
     if (!loading) {
-      setShowModal(false)
-      setError('')
+      setShowModal(false);
+      setError("");
     }
-  }
+  };
 
   return (
     <>
@@ -213,7 +226,10 @@ export default function AddAssetForm({ userId }) {
                   {/* Symbol */}
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Symbole Yahoo Finance <span className="text-text-muted text-xs">(optionnel)</span>
+                      Symbole Yahoo Finance{" "}
+                      <span className="text-text-muted text-xs">
+                        (optionnel)
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -246,7 +262,8 @@ export default function AddAssetForm({ userId }) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Prix d'achat (€) <span className="text-accent-red">*</span>
+                        Prix d'achat (€){" "}
+                        <span className="text-accent-red">*</span>
                       </label>
                       <input
                         type="number"
@@ -263,7 +280,10 @@ export default function AddAssetForm({ userId }) {
                   {/* Current Price */}
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Prix actuel (€) <span className="text-text-muted text-xs">(optionnel)</span>
+                      Prix actuel (€){" "}
+                      <span className="text-text-muted text-xs">
+                        (optionnel)
+                      </span>
                     </label>
                     <input
                       type="number"
@@ -312,5 +332,5 @@ export default function AddAssetForm({ userId }) {
         )}
       </AnimatePresence>
     </>
-  )
+  );
 }
