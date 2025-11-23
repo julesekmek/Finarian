@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { assetId, symbol, referencePrice } = await req.json();
+    const { assetId, symbol, referencePrice, isUpdate } = await req.json();
 
     if (!assetId) {
       return new Response(JSON.stringify({ error: "Missing assetId" }), {
@@ -263,20 +263,39 @@ Deno.serve(async (req) => {
       finalData = forwardFillWeekends(rawData);
       dataSource = `Yahoo Finance (${symbol})`;
     } else if (referencePrice) {
-      // Savings asset: generate all dates with constant price
-      console.log(
-        `Generating historical data for savings asset ${assetId} with price ${referencePrice}`
-      );
-
+      // Savings asset: generate dates with constant price
       const today = new Date().toISOString().split("T")[0];
-      const allDates = generateDateRange("2025-01-02", today);
 
-      finalData = allDates.map((date) => ({
-        date,
-        price: Math.round(referencePrice * 100) / 100,
-      }));
+      if (isUpdate) {
+        // Modification: only update from today onwards (preserve historical values)
+        console.log(
+          `Updating historical data for savings asset ${assetId} from today with price ${referencePrice}`
+        );
 
-      dataSource = `Constant price (${referencePrice})`;
+        // Only generate from today onwards
+        const allDates = generateDateRange(today, today);
+
+        finalData = allDates.map((date) => ({
+          date,
+          price: Math.round(referencePrice * 100) / 100,
+        }));
+
+        dataSource = `Constant price from today (${referencePrice})`;
+      } else {
+        // Creation: backfill entire YTD
+        console.log(
+          `Generating historical data for savings asset ${assetId} with price ${referencePrice}`
+        );
+
+        const allDates = generateDateRange("2025-01-02", today);
+
+        finalData = allDates.map((date) => ({
+          date,
+          price: Math.round(referencePrice * 100) / 100,
+        }));
+
+        dataSource = `Constant price (${referencePrice})`;
+      }
     }
 
     // Upsert all data points

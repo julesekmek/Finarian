@@ -119,7 +119,11 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
           // Prepare request body based on asset type
           const body = symbol.trim()
             ? { assetId: asset.id, symbol: symbol.trim() }
-            : { assetId: asset.id, referencePrice: numericCurrentPrice };
+            : {
+                assetId: asset.id,
+                referencePrice: numericCurrentPrice,
+                isUpdate: true,
+              };
 
           const response = await fetch(
             `${
