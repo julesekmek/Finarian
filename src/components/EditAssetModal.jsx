@@ -15,6 +15,8 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
   const [quantity, setQuantity] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
+  const [region, setRegion] = useState("");
+  const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,6 +29,8 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
       setQuantity(asset.quantity?.toString() || "0");
       setPurchasePrice(asset.purchase_price?.toString() || "0");
       setCurrentPrice(asset.current_price?.toString() || "0");
+      setRegion(asset.region || "");
+      setSector(asset.sector || "");
     }
   }, [asset]);
 
@@ -83,6 +87,8 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
           quantity: numericQuantity,
           purchase_price: numericPurchasePrice,
           current_price: numericCurrentPrice,
+          region: region.trim() || null,
+          sector: sector.trim() || null,
           last_updated: new Date().toISOString(),
         })
         .eq("id", asset.id)
@@ -98,6 +104,8 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
               name: name.trim(),
               category: category.trim(),
               symbol: symbol.trim() || null,
+              region: region.trim() || null,
+              sector: sector.trim() || null,
               quantity: numericQuantity,
               purchase_price: numericPurchasePrice,
               current_price: numericCurrentPrice,
@@ -255,6 +263,36 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
                 className="input-field w-full"
                 disabled={loading}
               />
+            </div>
+
+            {/* Region and Sector */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Zone géographique
+                </label>
+                <input
+                  type="text"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  placeholder="ex: Europe, US"
+                  className="input-field w-full"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Domaine d'activité
+                </label>
+                <input
+                  type="text"
+                  value={sector}
+                  onChange={(e) => setSector(e.target.value)}
+                  placeholder="ex: Tech, Santé"
+                  className="input-field w-full"
+                  disabled={loading}
+                />
+              </div>
             </div>
 
             {/* Quantity, Purchase Price, Current Price */}

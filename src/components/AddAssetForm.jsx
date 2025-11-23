@@ -16,6 +16,8 @@ export default function AddAssetForm({ userId }) {
   const [quantity, setQuantity] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
+  const [region, setRegion] = useState("");
+  const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,6 +67,8 @@ export default function AddAssetForm({ userId }) {
           quantity: numericQuantity,
           purchase_price: numericPurchasePrice,
           current_price: numericCurrentPrice,
+          region: region.trim() || null,
+          sector: sector.trim() || null,
           user_id: userId,
         })
         .select()
@@ -242,6 +246,36 @@ export default function AddAssetForm({ userId }) {
                     <p className="text-xs text-text-muted mt-1">
                       Pour une mise à jour automatique des prix
                     </p>
+                  </div>
+
+                  {/* Region and Sector */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        Zone géographique
+                      </label>
+                      <input
+                        type="text"
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        placeholder="ex: Europe, US"
+                        className="input-field w-full"
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        Domaine d'activité
+                      </label>
+                      <input
+                        type="text"
+                        value={sector}
+                        onChange={(e) => setSector(e.target.value)}
+                        placeholder="ex: Tech, Santé"
+                        className="input-field w-full"
+                        disabled={loading}
+                      />
+                    </div>
                   </div>
 
                   {/* Quantity and Purchase Price */}

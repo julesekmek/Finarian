@@ -1,13 +1,4 @@
-/**
- * CategoryDetail component - Page détail d'une catégorie
- * Affiche les actifs d'une catégorie spécifique avec leurs performances
- *
- * @param {string} categoryName - Nom de la catégorie à afficher
- * @param {Array} assets - Liste complète des actifs
- * @param {Function} onBack - Callback pour retourner à la vue précédente
- */
-
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -19,7 +10,6 @@ import {
   Search,
   ArrowUpDown,
   PieChart as PieChartIcon,
-  Eye,
 } from "lucide-react";
 import {
   PieChart,
@@ -34,9 +24,9 @@ import {
   calculateAssetMetrics,
   calculateCategoryMetrics,
 } from "../lib/utils/calculations";
+import { supabase } from "../lib/supabaseClient";
 import EditAssetModal from "./EditAssetModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
-import SavingsSimulator from "./SavingsSimulator";
 
 // Colors for pie chart
 const COLORS = [
@@ -52,20 +42,129 @@ const COLORS = [
   "#F472B6", // pink-300
 ];
 
+// Component to handle savings yield input and calculation
+const SavingsYieldControl = ({ asset }) => {
+  const [apy, setApy] = useState(asset.apy || 0);
+
+  // Update local state when prop changes (from DB update)
+  useEffect(() => {
+    setApy(asset.apy || 0);
+  }, [asset.apy]);
+
+  const handleBlur = async () => {
+    const newApy = parseFloat(apy);
+    const oldApy = parseFloat(asset.apy || 0);
+
+    if (!isNaN(newApy) && newApy !== oldApy) {
+      const { error } = await supabase
+        .from("assets")
+        .update({ apy: newApy })
+        .eq("id", asset.id);
+
+      if (error) console.error("Error updating APY:", error);
+    }
+  };
+
+  const annualYield =
+    asset.metrics.totalCurrentValue * (parseFloat(apy || 0) / 100);
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const daysElapsed = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24));
+  const accrued = annualYield * (daysElapsed / 365);
+
+  return (
+    <div className="flex items-center gap-4 bg-dark-bg/30 p-3 rounded-lg border border-border-subtle mt-4">
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-text-muted">Rendement annuel</label>
+        <div className="relative">
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            value={apy}
+            onChange={(e) => setApy(e.target.value)}
+            onBlur={handleBlur}
+            className="w-24 px-3 py-1.5 bg-dark-card border border-border-subtle rounded-lg text-sm text-text-primary focus:border-accent-primary focus:outline-none text-right pr-7 transition-colors"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+            %
+          </span>
+        </div>
+      </div>
+
+      <div className="h-8 w-px bg-border-subtle"></div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-text-muted">
+          Rendement acquis (YTD)
+        </label>
+        <div className="flex items-baseline gap-2">
+          <span className="font-bold text-accent-green text-sm">
+            +{formatCurrency(accrued)}
+          </span>
+          <span className="text-[10px] text-text-muted">
+            ({daysElapsed} jours)
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function CategoryDetail({ categoryName, assets, onBack }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showSavingsSimulator, setShowSavingsSimulator] = useState(false);
-  const [selectedSavingsAsset, setSelectedSavingsAsset] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("value");
   const [sortDirection, setSortDirection] = useState("desc");
+  const [liveQuotes, setLiveQuotes] = useState({});
 
   // Filter assets for this category
-  const categoryAssets = assets.filter(
-    (asset) => asset.category === categoryName
+  const categoryAssets = useMemo(
+    () => assets.filter((asset) => asset.category === categoryName),
+    [assets, categoryName]
   );
+
+  // Fetch live quotes for assets with symbols
+  useEffect(() => {
+    const fetchLiveQuotes = async () => {
+      const symbols = categoryAssets
+        .filter((a) => a.symbol && a.symbol.trim() !== "")
+        .map((a) => a.symbol);
+
+      if (symbols.length === 0) return;
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-live-quotes`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${
+                session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY
+              }`,
+            },
+            body: JSON.stringify({ symbols }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setLiveQuotes(data);
+        }
+      } catch (error) {
+        console.error("Error fetching live quotes:", error);
+      }
+    };
+
+    fetchLiveQuotes();
+  }, [categoryAssets]);
 
   // Calculate category totals using centralized utility
   const categoryMetrics = calculateCategoryMetrics(categoryAssets)[0] || {
@@ -85,17 +184,42 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     metrics: calculateAssetMetrics(asset),
   }));
 
-  // Prepare data for pie chart - Asset distribution by value
-  const pieChartData = enrichedAssets
-    .map((asset) => ({
-      name: asset.name,
-      value: asset.metrics.totalCurrentValue,
-      percentage:
-        totalCurrent > 0
-          ? (asset.metrics.totalCurrentValue / totalCurrent) * 100
-          : 0,
-    }))
-    .sort((a, b) => b.value - a.value); // Sort by value descending
+  // Calculate total accrued yield for Epargne category
+  const totalAccruedYield =
+    categoryName === "Epargne"
+      ? enrichedAssets.reduce((sum, asset) => {
+          const apy = parseFloat(asset.apy || 0);
+          const annualYield = asset.metrics.totalCurrentValue * (apy / 100);
+          const now = new Date();
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          const daysElapsed = Math.floor(
+            (now - startOfYear) / (1000 * 60 * 60 * 24)
+          );
+          return sum + annualYield * (daysElapsed / 365);
+        }, 0)
+      : 0;
+
+  // Helper to aggregate data by key
+  const aggregateData = (assets, key) => {
+    const data = {};
+    let total = 0;
+    assets.forEach((asset) => {
+      const label = asset[key] || "Non renseigné";
+      const value = asset.metrics.totalCurrentValue;
+      data[label] = (data[label] || 0) + value;
+      total += value;
+    });
+    return Object.entries(data)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? (value / total) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  const regionData = aggregateData(enrichedAssets, "region");
+  const sectorData = aggregateData(enrichedAssets, "sector");
 
   // Filter assets by search query
   const filteredAssets = enrichedAssets.filter((asset) => {
@@ -179,28 +303,6 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     handleCloseDelete();
   };
 
-  // Savings Simulator handlers
-  const handleOpenSavingsSimulator = (asset) => {
-    setSelectedSavingsAsset(asset);
-    setShowSavingsSimulator(true);
-  };
-
-  const handleCloseSavingsSimulator = () => {
-    setShowSavingsSimulator(false);
-    setSelectedSavingsAsset(null);
-  };
-
-  // If showing savings simulator, render it instead of the category detail
-  if (showSavingsSimulator && selectedSavingsAsset) {
-    return (
-      <SavingsSimulator
-        asset={selectedSavingsAsset}
-        onBack={handleCloseSavingsSimulator}
-        userId={selectedSavingsAsset.user_id}
-      />
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -222,7 +324,11 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
         </h1>
 
         {/* Category Totals */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div
+          className={`grid grid-cols-2 ${
+            categoryName === "Epargne" ? "sm:grid-cols-5" : "sm:grid-cols-4"
+          } gap-4`}
+        >
           <div className="bg-dark-hover rounded-xl p-4">
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
               Investi
@@ -282,103 +388,199 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
               </p>
             </div>
           </div>
+
+          {/* New Card for Epargne - YTD Yield */}
+          {categoryName === "Epargne" && (
+            <div className="bg-dark-hover rounded-xl p-4">
+              <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
+                Rendement YTD
+              </p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4 text-accent-green" />
+                <p className="text-2xl font-bold text-accent-green">
+                  +{formatCurrency(totalAccruedYield)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
 
-      {/* Pie Chart - Asset Distribution */}
-      {enrichedAssets.length > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card"
-        >
-          <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-            <PieChartIcon className="w-6 h-6 text-accent-primary" />
-            Répartition des actifs
-          </h2>
+      {/* Pie Charts - Region and Sector Distribution */}
+      {enrichedAssets.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Region Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="card"
+          >
+            <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+              <PieChartIcon className="w-6 h-6 text-accent-primary" />
+              Répartition Géographique
+            </h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-            {/* Pie Chart */}
-            <div className="h-64 md:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) =>
-                      percentage > 5 ? `${percentage.toFixed(1)}%` : ""
-                    }
-                    outerRadius={80}
-                    innerRadius={50}
-                    fill="#8884d8"
-                    dataKey="value"
-                    animationDuration={800}
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length > 0) {
-                        const data = payload[0];
-                        return (
-                          <div className="bg-dark-card border border-border-subtle px-4 py-3 rounded-xl shadow-card">
-                            <p className="text-sm font-semibold text-text-primary mb-1">
-                              {data.payload.name}
-                            </p>
-                            <p className="text-lg font-bold text-accent-primary">
-                              {formatCurrency(data.value)}
-                            </p>
-                            <p className="text-xs text-text-muted">
-                              {data.payload.percentage.toFixed(2)}% de la
-                              catégorie
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Legend with values */}
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-              {pieChartData.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-dark-hover rounded-lg hover:bg-dark-hover/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div
-                      className="w-4 h-4 rounded flex-shrink-0"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="h-64 w-full md:w-1/2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={regionData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      innerRadius={50}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationDuration={800}
+                    >
+                      {regionData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length > 0) {
+                          const data = payload[0];
+                          return (
+                            <div className="bg-dark-card border border-border-subtle px-4 py-3 rounded-xl shadow-card">
+                              <p className="text-sm font-semibold text-text-primary mb-1">
+                                {data.payload.name}
+                              </p>
+                              <p className="text-lg font-bold text-accent-primary">
+                                {formatCurrency(data.value)}
+                              </p>
+                              <p className="text-xs text-text-muted">
+                                {data.payload.percentage.toFixed(2)}%
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
-                    <span className="text-sm text-text-primary truncate">
-                      {item.name}
-                    </span>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full md:w-1/2 space-y-2 max-h-64 overflow-y-auto pr-2">
+                {regionData.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-dark-hover rounded-lg hover:bg-dark-hover/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
+                      />
+                      <span className="text-xs text-text-primary truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <p className="text-xs font-semibold text-text-primary">
+                        {item.percentage.toFixed(1)}%
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right ml-4 flex-shrink-0">
-                    <p className="text-sm font-semibold text-text-primary">
-                      {formatCurrency(item.value)}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {item.percentage.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+
+          {/* Sector Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card"
+          >
+            <h2 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
+              <PieChartIcon className="w-6 h-6 text-accent-secondary" />
+              Répartition Sectorielle
+            </h2>
+
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="h-64 w-full md:w-1/2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sectorData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      innerRadius={50}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationDuration={800}
+                    >
+                      {sectorData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[(index + 5) % COLORS.length]} // Offset colors for variety
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length > 0) {
+                          const data = payload[0];
+                          return (
+                            <div className="bg-dark-card border border-border-subtle px-4 py-3 rounded-xl shadow-card">
+                              <p className="text-sm font-semibold text-text-primary mb-1">
+                                {data.payload.name}
+                              </p>
+                              <p className="text-lg font-bold text-accent-primary">
+                                {formatCurrency(data.value)}
+                              </p>
+                              <p className="text-xs text-text-muted">
+                                {data.payload.percentage.toFixed(2)}%
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-full md:w-1/2 space-y-2 max-h-64 overflow-y-auto pr-2">
+                {sectorData.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-dark-hover rounded-lg hover:bg-dark-hover/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: COLORS[(index + 5) % COLORS.length],
+                        }}
+                      />
+                      <span className="text-xs text-text-primary truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <p className="text-xs font-semibold text-text-primary">
+                        {item.percentage.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
       )}
 
       {/* Assets List */}
@@ -505,16 +707,6 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                   </div>
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    {/* View Details button for Savings assets */}
-                    {asset.category === "Epargne" && (
-                      <button
-                        onClick={() => handleOpenSavingsSimulator(asset)}
-                        className="p-2 bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary rounded-lg transition-colors"
-                        title="Voir le simulateur"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    )}
                     <button
                       onClick={() => handleOpenEdit(asset)}
                       className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
@@ -533,25 +725,58 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                 </div>
 
                 {/* Asset Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                  <div>
-                    <p className="text-xs text-text-muted mb-1">Quantité</p>
-                    <p className="font-semibold text-text-primary">
-                      {metrics.quantity.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-muted mb-1">Prix d'achat</p>
-                    <p className="font-semibold text-text-primary">
-                      {formatCurrency(metrics.purchasePrice)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-muted mb-1">Prix actuel</p>
-                    <p className="font-semibold text-text-primary">
-                      {formatCurrency(metrics.currentPrice)}
-                    </p>
-                  </div>
+                <div
+                  className={`grid ${
+                    categoryName === "Epargne"
+                      ? "grid-cols-1"
+                      : "grid-cols-2 sm:grid-cols-4"
+                  } gap-3 mb-4`}
+                >
+                  {categoryName !== "Epargne" && (
+                    <>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Quantité</p>
+                        <p className="font-semibold text-text-primary">
+                          {metrics.quantity.toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">
+                          Prix d'achat
+                        </p>
+                        <p className="font-semibold text-text-primary">
+                          {formatCurrency(metrics.purchasePrice)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">
+                          Prix actuel
+                        </p>
+                        <div className="flex flex-col">
+                          <p className="font-semibold text-text-primary">
+                            {formatCurrency(metrics.currentPrice)}
+                          </p>
+                          {asset.symbol && liveQuotes[asset.symbol] && (
+                            <span
+                              className={`text-xs font-medium ${
+                                liveQuotes[asset.symbol].changePercent >= 0
+                                  ? "text-accent-green"
+                                  : "text-accent-red"
+                              }`}
+                            >
+                              {liveQuotes[asset.symbol].changePercent >= 0
+                                ? "+"
+                                : ""}
+                              {liveQuotes[asset.symbol].changePercent.toFixed(
+                                2
+                              )}
+                              % (24h)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <p className="text-xs text-text-muted mb-1">
                       Investissement
@@ -605,6 +830,11 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                     </p>
                   </div>
                 </div>
+
+                {/* Savings Yield Control - Only for Epargne category */}
+                {categoryName === "Epargne" && (
+                  <SavingsYieldControl asset={asset} />
+                )}
               </motion.div>
             );
           })}
