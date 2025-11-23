@@ -2,9 +2,9 @@ name: Daily Price Update
 
 # Déclencheurs du workflow
 on:
-  # Exécution programmée : tous les jours à 8h UTC (10h Paris en hiver, 9h en été)
+  # Exécution programmée : tous les jours à 21h30 UTC (22h30 Paris en hiver, 23h30 en été)
   schedule:
-    - cron: "0 8 * * *" # Format: minute heure jour mois jour_semaine
+    - cron: "30 21 * * *" # Format: minute heure jour mois jour_semaine
 
   # Permet aussi le déclenchement manuel depuis l'interface GitHub
   workflow_dispatch:

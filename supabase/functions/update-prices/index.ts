@@ -58,6 +58,38 @@ async function fetchYahooPrice(symbol: string): Promise<number | null> {
   }
 }
 
+/**
+ * Get the price from the previous day's asset_history
+ * Used for assets without symbols (manual assets like real estate, art, etc.)
+ */
+async function getPreviousDayPrice(
+  supabaseAdmin: any,
+  assetId: string
+): Promise<number | null> {
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    const { data, error } = await supabaseAdmin
+      .from("asset_history")
+      .select("price")
+      .eq("asset_id", assetId)
+      .eq("date", yesterdayStr)
+      .single();
+
+    if (error || !data) {
+      console.warn(`No previous day price found for asset ${assetId}`);
+      return null;
+    }
+
+    return data.price;
+  } catch (error) {
+    console.error(`Error fetching previous day price for ${assetId}:`, error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -119,13 +151,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch assets with symbols
+    // Fetch all assets (with and without symbols)
     // If Service Role: fetch ALL users' assets
     // If User token: fetch only that user's assets
     let query = supabaseAdmin
       .from("assets")
-      .select("id, symbol, name, current_price, user_id")
-      .not("symbol", "is", null);
+      .select("id, symbol, name, current_price, user_id");
 
     if (!isServiceRole && userId) {
       query = query.eq("user_id", userId);
@@ -151,7 +182,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${assets.length} assets with symbols to update`);
+    console.log(`Found ${assets.length} assets to update`);
 
     // Update prices for all assets
     const updates: Array<{
@@ -163,27 +194,48 @@ Deno.serve(async (req) => {
     const failures: Array<{ id: string; symbol: string; reason: string }> = [];
 
     for (const asset of assets as Asset[]) {
-      if (!asset.symbol) continue;
+      let price: number | null = null;
+      let priceSource = "";
 
-      const price = await fetchYahooPrice(asset.symbol);
+      if (asset.symbol) {
+        // Asset has a symbol: fetch from Yahoo Finance
+        price = await fetchYahooPrice(asset.symbol);
+        priceSource = "Yahoo Finance";
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } else {
+        // Asset has no symbol: use previous day's price
+        price = await getPreviousDayPrice(supabaseAdmin, asset.id);
+
+        if (price === null) {
+          // Fallback: use current_price if no history exists
+          price = asset.current_price;
+          priceSource = "current_price (fallback)";
+        } else {
+          priceSource = "previous day";
+        }
+      }
 
       if (price !== null && price > 0) {
         updates.push({
           id: asset.id,
           price,
-          symbol: asset.symbol,
+          symbol: asset.symbol || asset.name,
           user_id: (asset as any).user_id, // Include user_id for database updates
         });
+        console.log(
+          `✓ Queued ${
+            asset.symbol || asset.name
+          }: ${price} (source: ${priceSource})`
+        );
       } else {
         failures.push({
           id: asset.id,
-          symbol: asset.symbol,
-          reason: "Price not found or invalid",
+          symbol: asset.symbol || asset.name,
+          reason: `No valid price found (source: ${priceSource})`,
         });
       }
-
-      // Small delay to avoid rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     // Batch update all successful price fetches + insert into history
