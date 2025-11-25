@@ -128,6 +128,8 @@ export default function AddAssetForm({ userId }) {
       setQuantity("");
       setPurchasePrice("");
       setCurrentPrice("");
+      setRegion("");
+      setSector("");
       setShowModal(false);
     } catch (err) {
       console.error("Error adding asset:", err);
@@ -153,7 +155,7 @@ export default function AddAssetForm({ userId }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setShowModal(true)}
-        className="fixed bottom-8 right-8 z-30 w-16 h-16 bg-gradient-primary rounded-2xl shadow-glow-primary flex items-center justify-center text-white hover:shadow-glow-primary/80 transition-all"
+        className="fixed bottom-24 md:bottom-8 right-8 z-30 w-16 h-16 bg-gradient-primary rounded-2xl shadow-glow-primary flex items-center justify-center text-white hover:shadow-glow-primary/80 transition-all"
         title="Ajouter un actif"
       >
         <Plus className="w-8 h-8" />

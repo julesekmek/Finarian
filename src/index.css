@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,7 +8,7 @@
   * {
     @apply border-border-subtle;
   }
-  
+
   body {
     @apply bg-dark-bg text-text-primary font-inter antialiased;
     margin: 0;
@@ -44,9 +44,9 @@
   /* Button variants */
   .btn-primary {
     @apply text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 active:scale-95;
-    background-color: #F1C086;
+    background-color: #f1c086;
   }
-  
+
   .btn-primary:hover {
     background-color: rgba(241, 192, 134, 0.9);
     box-shadow: 0 0 20px rgba(241, 192, 134, 0.3);
@@ -64,9 +64,9 @@
   .input-field {
     @apply bg-dark-hover border border-border-subtle rounded-xl px-4 py-3 text-text-primary placeholder-text-muted focus:outline-none transition-all;
   }
-  
+
   .input-field:focus {
-    border-color: #E8DCC8;
+    border-color: #e8dcc8;
     box-shadow: 0 0 0 3px rgba(232, 220, 200, 0.5);
   }
 
@@ -77,7 +77,7 @@
 
   /* Text gradients */
   .text-gradient-primary {
-    background: linear-gradient(to right, #F1C086, #fb923c);
+    background: linear-gradient(to right, #f1c086, #fb923c);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -113,5 +113,23 @@
   .animate-count-up {
     animation: countUp 0.5s ease-out;
   }
-}
 
+  /* Mobile bottom navigation safe area */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Pull to refresh animations */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin 1.5s linear infinite;
+  }
+}

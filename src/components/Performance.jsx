@@ -3,81 +3,116 @@
  * Beautiful overview with sorting and comparison features
  */
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, ArrowUpDown, BarChart3, Search } from 'lucide-react'
-import AssetPerformanceCard from './AssetPerformanceCard'
-import { getAllAssetsHistory, calculateAssetPerformance } from '../lib/portfolioHistory'
-import { formatCurrency } from '../lib/utils/formatters'
-import { DEFAULT_PERIOD, CHART_PERIODS } from '../lib/utils/constants'
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  TrendingUp,
+  TrendingDown,
+  ArrowUpDown,
+  BarChart3,
+  Search,
+  RefreshCw,
+} from "lucide-react";
+import AssetPerformanceCard from "./AssetPerformanceCard";
+import {
+  getAllAssetsHistory,
+  calculateAssetPerformance,
+} from "../lib/portfolioHistory";
+import { formatCurrency } from "../lib/utils/formatters";
+import { DEFAULT_PERIOD, CHART_PERIODS } from "../lib/utils/constants";
+import { usePullToRefresh } from "../lib/hooks/usePullToRefresh";
+import { callUpdatePrices } from "../lib/updatePrices";
 
 export default function Performance({ userId, assets }) {
-  const [period, setPeriod] = useState(DEFAULT_PERIOD)
-  const [sortBy, setSortBy] = useState('performance')
-  const [sortDirection, setSortDirection] = useState('desc')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [assetsWithMetrics, setAssetsWithMetrics] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [comparison, setComparison] = useState(null)
+  const [period, setPeriod] = useState(DEFAULT_PERIOD);
+  const [sortBy, setSortBy] = useState("performance");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [assetsWithMetrics, setAssetsWithMetrics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [comparison, setComparison] = useState(null);
+
+  // Pull-to-refresh functionality
+  const handleRefresh = async () => {
+    await callUpdatePrices();
+    // Assets will be updated via realtime subscription in App.jsx
+    // which will trigger the useEffect to refetch data
+  };
+
+  const { containerRef, isPulling, isRefreshing, pullDistance, pullThreshold } =
+    usePullToRefresh(handleRefresh);
 
   // Fetch all assets history and calculate metrics
   useEffect(() => {
     async function fetchData() {
       if (!assets || assets.length === 0) {
-        setAssetsWithMetrics([])
-        setLoading(false)
-        return
+        setAssetsWithMetrics([]);
+        setLoading(false);
+        return;
       }
 
-      setLoading(true)
+      setLoading(true);
       try {
-        const allHistory = await getAllAssetsHistory(userId, period)
-        
-        const enrichedAssets = assets.map(asset => {
-          const history = allHistory[asset.id] || []
-          const metrics = calculateAssetPerformance(history, asset)
-          
-          return {
-            ...asset,
-            history,
-            metrics
-          }
-        }).filter(asset => asset.metrics.dataPoints > 0)
+        const allHistory = await getAllAssetsHistory(userId, period);
 
-        setAssetsWithMetrics(enrichedAssets)
-        calculateComparison(enrichedAssets)
+        const enrichedAssets = assets
+          .map((asset) => {
+            const history = allHistory[asset.id] || [];
+            const metrics = calculateAssetPerformance(history, asset);
+
+            return {
+              ...asset,
+              history,
+              metrics,
+            };
+          })
+          .filter((asset) => asset.metrics.dataPoints > 0);
+
+        setAssetsWithMetrics(enrichedAssets);
+        calculateComparison(enrichedAssets);
       } catch (error) {
-        console.error('Error fetching performance data:', error)
+        console.error("Error fetching performance data:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchData()
-  }, [userId, assets, period])
+    fetchData();
+  }, [userId, assets, period]);
 
   // Calculate comparison statistics
   const calculateComparison = (enrichedAssets) => {
     if (enrichedAssets.length === 0) {
-      setComparison(null)
-      return
+      setComparison(null);
+      return;
     }
 
-    const totalValue = enrichedAssets.reduce((sum, a) => sum + a.metrics.currentValue, 0)
-    const totalInvested = enrichedAssets.reduce((sum, a) => sum + a.metrics.investedValue, 0)
-    const totalGain = totalValue - totalInvested
-    const totalGainPercent = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0
+    const totalValue = enrichedAssets.reduce(
+      (sum, a) => sum + a.metrics.currentValue,
+      0
+    );
+    const totalInvested = enrichedAssets.reduce(
+      (sum, a) => sum + a.metrics.investedValue,
+      0
+    );
+    const totalGain = totalValue - totalInvested;
+    const totalGainPercent =
+      totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
 
     const sortedByPerformance = [...enrichedAssets].sort(
       (a, b) => b.metrics.priceChangePercent - a.metrics.priceChangePercent
-    )
-    
-    const bestPerformer = sortedByPerformance[0]
-    const worstPerformer = sortedByPerformance[sortedByPerformance.length - 1]
+    );
 
-    const positiveCount = enrichedAssets.filter(a => a.metrics.priceChangePercent > 0).length
-    const negativeCount = enrichedAssets.filter(a => a.metrics.priceChangePercent < 0).length
-    const neutralCount = enrichedAssets.length - positiveCount - negativeCount
+    const bestPerformer = sortedByPerformance[0];
+    const worstPerformer = sortedByPerformance[sortedByPerformance.length - 1];
+
+    const positiveCount = enrichedAssets.filter(
+      (a) => a.metrics.priceChangePercent > 0
+    ).length;
+    const negativeCount = enrichedAssets.filter(
+      (a) => a.metrics.priceChangePercent < 0
+    ).length;
+    const neutralCount = enrichedAssets.length - positiveCount - negativeCount;
 
     setComparison({
       totalValue,
@@ -89,57 +124,57 @@ export default function Performance({ userId, assets }) {
       positiveCount,
       negativeCount,
       neutralCount,
-      totalAssets: enrichedAssets.length
-    })
-  }
+      totalAssets: enrichedAssets.length,
+    });
+  };
 
   // Filter assets by search query
-  const filteredAssets = assetsWithMetrics.filter(asset => {
-    if (!searchQuery.trim()) return true
-    
-    const query = searchQuery.toLowerCase()
-    const matchesName = asset.name.toLowerCase().includes(query)
-    const matchesSymbol = asset.symbol?.toLowerCase().includes(query)
-    const matchesCategory = asset.category?.toLowerCase().includes(query)
-    
-    return matchesName || matchesSymbol || matchesCategory
-  })
+  const filteredAssets = assetsWithMetrics.filter((asset) => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+    const matchesName = asset.name.toLowerCase().includes(query);
+    const matchesSymbol = asset.symbol?.toLowerCase().includes(query);
+    const matchesCategory = asset.category?.toLowerCase().includes(query);
+
+    return matchesName || matchesSymbol || matchesCategory;
+  });
 
   // Sort filtered assets
   const sortedAssets = [...filteredAssets].sort((a, b) => {
-    let aValue, bValue
+    let aValue, bValue;
 
     switch (sortBy) {
-      case 'performance':
-        aValue = a.metrics.priceChangePercent
-        bValue = b.metrics.priceChangePercent
-        break
-      case 'value':
-        aValue = a.metrics.currentValue
-        bValue = b.metrics.currentValue
-        break
-      case 'name':
-        aValue = a.name.toLowerCase()
-        bValue = b.name.toLowerCase()
-        return sortDirection === 'asc' 
+      case "performance":
+        aValue = a.metrics.priceChangePercent;
+        bValue = b.metrics.priceChangePercent;
+        break;
+      case "value":
+        aValue = a.metrics.currentValue;
+        bValue = b.metrics.currentValue;
+        break;
+      case "name":
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        return sortDirection === "asc"
           ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue)
+          : bValue.localeCompare(aValue);
       default:
-        return 0
+        return 0;
     }
 
-    return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
-  })
+    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+  });
 
   // Toggle sort direction
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(newSortBy)
-      setSortDirection('desc')
+      setSortBy(newSortBy);
+      setSortDirection("desc");
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -156,7 +191,7 @@ export default function Performance({ userId, assets }) {
           </div>
         </motion.div>
       </div>
-    )
+    );
   }
 
   if (!assets || assets.length === 0) {
@@ -169,12 +204,14 @@ export default function Performance({ userId, assets }) {
         <div className="w-16 h-16 bg-dark-hover rounded-2xl flex items-center justify-center mx-auto mb-4">
           <BarChart3 className="w-8 h-8 text-text-muted" />
         </div>
-        <p className="text-lg text-text-secondary mb-2">Aucun actif dans votre portefeuille</p>
+        <p className="text-lg text-text-secondary mb-2">
+          Aucun actif dans votre portefeuille
+        </p>
         <p className="text-sm text-text-muted">
           Ajoutez des actifs depuis le Dashboard pour voir leurs performances
         </p>
       </motion.div>
-    )
+    );
   }
 
   if (assetsWithMetrics.length === 0) {
@@ -187,16 +224,41 @@ export default function Performance({ userId, assets }) {
         <div className="w-16 h-16 bg-dark-hover rounded-2xl flex items-center justify-center mx-auto mb-4">
           <TrendingUp className="w-8 h-8 text-text-muted" />
         </div>
-        <p className="text-lg text-text-secondary mb-2">Aucune donnée historique</p>
+        <p className="text-lg text-text-secondary mb-2">
+          Aucune donnée historique
+        </p>
         <p className="text-sm text-text-muted">
           Mettez à jour les prix pour commencer à suivre les performances
         </p>
       </motion.div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="relative space-y-6">
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 z-50 bg-dark-card border border-border-subtle rounded-full px-4 py-2 shadow-glow-primary flex items-center gap-2"
+          style={{ marginTop: `${Math.min(pullDistance * 0.5, 40)}px` }}
+        >
+          <RefreshCw
+            className={`w-4 h-4 text-accent-primary ${
+              isRefreshing ? "animate-spin" : ""
+            }`}
+          />
+          <span className="text-xs font-medium text-text-primary">
+            {isRefreshing
+              ? "Actualisation..."
+              : pullDistance >= pullThreshold
+              ? "Relâcher pour actualiser"
+              : "Tirer pour actualiser"}
+          </span>
+        </motion.div>
+      )}
+
       {/* Title with Controls */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -222,7 +284,7 @@ export default function Performance({ userId, assets }) {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary text-sm"
               >
                 Effacer
@@ -235,7 +297,9 @@ export default function Performance({ userId, assets }) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Period selector */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label className="text-sm text-text-secondary font-medium">Période :</label>
+            <label className="text-sm text-text-secondary font-medium">
+              Période :
+            </label>
             <div className="flex gap-2 flex-wrap">
               {Object.entries(CHART_PERIODS).map(([key, days]) => (
                 <button
@@ -243,11 +307,11 @@ export default function Performance({ userId, assets }) {
                   onClick={() => setPeriod(days)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     period === days
-                      ? 'bg-accent-primary text-white shadow-glow-primary'
-                      : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+                      ? "bg-accent-primary text-white shadow-glow-primary"
+                      : "bg-dark-hover text-text-secondary hover:bg-dark-hover/80"
                   }`}
                 >
-                  {days === 'all' ? 'Tout' : `${days}J`}
+                  {days === "all" ? "Tout" : `${days}J`}
                 </button>
               ))}
             </div>
@@ -255,46 +319,44 @@ export default function Performance({ userId, assets }) {
 
           {/* Sort controls */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label className="text-sm text-text-secondary font-medium">Trier par :</label>
+            <label className="text-sm text-text-secondary font-medium">
+              Trier par :
+            </label>
             <div className="flex gap-2 flex-wrap">
               <button
-                onClick={() => handleSort('performance')}
+                onClick={() => handleSort("performance")}
                 className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  sortBy === 'performance'
-                    ? 'bg-accent-primary text-white shadow-glow-primary'
-                    : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+                  sortBy === "performance"
+                    ? "bg-accent-primary text-white shadow-glow-primary"
+                    : "bg-dark-hover text-text-secondary hover:bg-dark-hover/80"
                 }`}
               >
                 Performance
-                {sortBy === 'performance' && (
+                {sortBy === "performance" && (
                   <ArrowUpDown className="w-3 h-3" />
                 )}
               </button>
               <button
-                onClick={() => handleSort('value')}
+                onClick={() => handleSort("value")}
                 className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  sortBy === 'value'
-                    ? 'bg-accent-primary text-white shadow-glow-primary'
-                    : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+                  sortBy === "value"
+                    ? "bg-accent-primary text-white shadow-glow-primary"
+                    : "bg-dark-hover text-text-secondary hover:bg-dark-hover/80"
                 }`}
               >
                 Valeur
-                {sortBy === 'value' && (
-                  <ArrowUpDown className="w-3 h-3" />
-                )}
+                {sortBy === "value" && <ArrowUpDown className="w-3 h-3" />}
               </button>
               <button
-                onClick={() => handleSort('name')}
+                onClick={() => handleSort("name")}
                 className={`flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  sortBy === 'name'
-                    ? 'bg-accent-primary text-white shadow-glow-primary'
-                    : 'bg-dark-hover text-text-secondary hover:bg-dark-hover/80'
+                  sortBy === "name"
+                    ? "bg-accent-primary text-white shadow-glow-primary"
+                    : "bg-dark-hover text-text-secondary hover:bg-dark-hover/80"
                 }`}
               >
                 Nom
-                {sortBy === 'name' && (
-                  <ArrowUpDown className="w-3 h-3" />
-                )}
+                {sortBy === "name" && <ArrowUpDown className="w-3 h-3" />}
               </button>
             </div>
           </div>
@@ -310,10 +372,7 @@ export default function Performance({ userId, assets }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <AssetPerformanceCard 
-              asset={asset} 
-              period={period}
-            />
+            <AssetPerformanceCard asset={asset} period={period} />
           </motion.div>
         ))}
       </div>
@@ -335,10 +394,12 @@ export default function Performance({ userId, assets }) {
 
       {/* Footer stats */}
       <div className="text-center text-sm text-text-muted">
-        {sortedAssets.length} actif{sortedAssets.length > 1 ? 's' : ''} affiché{sortedAssets.length > 1 ? 's' : ''}
+        {sortedAssets.length} actif{sortedAssets.length > 1 ? "s" : ""} affiché
+        {sortedAssets.length > 1 ? "s" : ""}
         {searchQuery && ` (sur ${assetsWithMetrics.length} avec historique)`}
-        {!searchQuery && ' avec historique'} • {period === 'all' ? 'Toutes les données' : `${period} jours`}
+        {!searchQuery && " avec historique"} •{" "}
+        {period === "all" ? "Toutes les données" : `${period} jours`}
       </div>
     </div>
-  )
+  );
 }

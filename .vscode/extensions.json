@@ -1,27 +1,5 @@
 {
   "recommendations": [
-    // Formatage et qualité du code
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
-    
-    // React et JSX
-    "dsznajder.es7-react-js-snippets",
-    
-    // Tailwind CSS
-    "bradlc.vscode-tailwindcss",
-    
-    // Supabase
-    "supabase.supabase-vscode",
-    
-    // Git
-    "eamodio.gitlens",
-    
-    // Markdown
-    "yzhang.markdown-all-in-one",
-    
-    // Utilitaires
-    "christian-kohler.path-intellisense",
-    "formulahendry.auto-rename-tag"
+    "denoland.vscode-deno"
   ]
 }
-

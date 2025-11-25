@@ -330,13 +330,13 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
         <div
           className={`grid grid-cols-2 ${
             hasManualAssets ? "sm:grid-cols-5" : "sm:grid-cols-4"
-          } gap-4`}
+          } gap-3`}
         >
           <div className="bg-dark-hover rounded-xl p-4">
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
               Investi
             </p>
-            <p className="text-2xl font-bold text-text-secondary">
+            <p className="text-xl font-bold text-text-secondary">
               {formatCurrency(totalInvested)}
             </p>
           </div>
@@ -345,7 +345,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
             <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
               Valeur actuelle
             </p>
-            <p className="text-2xl font-bold text-text-primary">
+            <p className="text-xl font-bold text-text-primary">
               {formatCurrency(totalCurrent)}
             </p>
           </div>
@@ -361,7 +361,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                 <TrendingDown className="w-4 h-4 text-accent-red" />
               )}
               <p
-                className={`text-2xl font-bold ${
+                className={`text-xl font-bold ${
                   isPositive ? "text-accent-green" : "text-accent-red"
                 }`}
               >
@@ -382,7 +382,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                 <TrendingDown className="w-4 h-4 text-accent-red" />
               )}
               <p
-                className={`text-2xl font-bold ${
+                className={`text-xl font-bold ${
                   isPositive ? "text-accent-green" : "text-accent-red"
                 }`}
               >
@@ -400,7 +400,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
               </p>
               <div className="flex items-center gap-1">
                 <TrendingUp className="w-4 h-4 text-accent-green" />
-                <p className="text-2xl font-bold text-accent-green">
+                <p className="text-xl font-bold text-accent-green">
                   +{formatCurrency(totalAccruedYield)}
                 </p>
               </div>

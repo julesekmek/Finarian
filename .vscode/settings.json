@@ -1,9 +1,35 @@
 {
-  // 📁 Tri des fichiers dans l'explorateur
-  "explorer.sortOrder": "type",
-  "explorer.sortOrderLexicographicOptions": "default",
-  
-  // 🎯 File Nesting - Regroupe les fichiers liés
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "deno.lint": true,
+  "deno.unstable": [
+    "bare-node-builtins",
+    "byonm",
+    "sloppy-imports",
+    "unsafe-proto",
+    "webgpu",
+    "broadcast-channel",
+    "worker-options",
+    "cron",
+    "kv",
+    "ffi",
+    "fs",
+    "http",
+    "net"
+  ],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "explorer.compactFolders": false,
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
@@ -11,38 +37,22 @@
     "*.jsx": "${capture}.js",
     "*.ts": "${capture}.js, ${capture}.d.ts, ${capture}.*.ts",
     "*.tsx": "${capture}.ts, ${capture}.d.ts, ${capture}.*.tsx",
-    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, npm-debug.log*",
-    "README.md": "README.*.md, CHANGELOG.md, LICENSE, AUTHORS, CONTRIBUTING.md",
     ".gitignore": ".gitattributes, .gitmodules, .gitmessage, .mailmap, .git-blame*",
-    "vite.config.js": "vite.config.*.js, vitest.config.js",
-    "tailwind.config.js": "tailwind.config.*.js, postcss.config.js"
+    "README.md": "README.*.md, CHANGELOG.md, LICENSE, AUTHORS, CONTRIBUTING.md",
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, npm-debug.log*",
+    "tailwind.config.js": "tailwind.config.*.js, postcss.config.js",
+    "vite.config.js": "vite.config.*.js, vitest.config.js"
   },
-  
-  // 🗂️ Affichage des dossiers
-  "explorer.compactFolders": false,
-  
-  // 🎨 Mise en forme pour React/JSX
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  
-  // 🔍 Exclure des fichiers de la recherche
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/package-lock.json": true,
-    "**/.git": true
-  },
-  
-  // 👁️ Cacher certains fichiers dans l'explorateur (optionnel)
+  "explorer.sortOrder": "type",
+  "explorer.sortOrderLexicographicOptions": "default",
   "files.exclude": {
-    "**/.git": true,
     "**/.DS_Store": true,
+    "**/.git": true,
     "**/node_modules": false
+  },
+  "search.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/package-lock.json": true
   }
 }
-
