@@ -106,7 +106,8 @@ function generateDateRange(startDate: string, endDate: string): string[] {
  * Output: Array with all 7 days, weekends filled with Friday price
  */
 function forwardFillWeekends(
-  data: HistoricalDataPoint[]
+  data: HistoricalDataPoint[],
+  fillToDate?: string
 ): HistoricalDataPoint[] {
   if (data.length === 0) return [];
 
@@ -116,9 +117,14 @@ function forwardFillWeekends(
 
   // Get date range
   const startDate = data[0].date;
-  const endDate = data[data.length - 1].date;
-  const allDates = generateDateRange(startDate, endDate);
+  let endDate = data[data.length - 1].date;
 
+  // If a target fill date is provided and is later than the last data point, extend to it
+  if (fillToDate && fillToDate > endDate) {
+    endDate = fillToDate;
+  }
+
+  const allDates = generateDateRange(startDate, endDate);
   const filled: HistoricalDataPoint[] = [];
   let lastKnownPrice = data[0].price;
 
@@ -260,7 +266,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      finalData = forwardFillWeekends(rawData);
+      // Fill up to today to ensure weekends and gaps are covered
+      const today = new Date().toISOString().split("T")[0];
+      finalData = forwardFillWeekends(rawData, today);
       dataSource = `Yahoo Finance (${symbol})`;
     } else if (referencePrice) {
       // Savings asset: generate dates with constant price

@@ -184,20 +184,23 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     metrics: calculateAssetMetrics(asset),
   }));
 
-  // Calculate total accrued yield for Epargne category
-  const totalAccruedYield =
-    categoryName === "Epargne"
-      ? enrichedAssets.reduce((sum, asset) => {
-          const apy = parseFloat(asset.apy || 0);
-          const annualYield = asset.metrics.totalCurrentValue * (apy / 100);
-          const now = new Date();
-          const startOfYear = new Date(now.getFullYear(), 0, 1);
-          const daysElapsed = Math.floor(
-            (now - startOfYear) / (1000 * 60 * 60 * 24)
-          );
-          return sum + annualYield * (daysElapsed / 365);
-        }, 0)
-      : 0;
+  // Check if this category contains manual assets (no symbol)
+  const hasManualAssets = enrichedAssets.some((asset) => !asset.symbol);
+
+  // Calculate total accrued yield for manual assets (without symbol)
+  const totalAccruedYield = hasManualAssets
+    ? enrichedAssets.reduce((sum, asset) => {
+        if (asset.symbol) return sum; // Skip market assets
+        const apy = parseFloat(asset.apy || 0);
+        const annualYield = asset.metrics.totalCurrentValue * (apy / 100);
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const daysElapsed = Math.floor(
+          (now - startOfYear) / (1000 * 60 * 60 * 24)
+        );
+        return sum + annualYield * (daysElapsed / 365);
+      }, 0)
+    : 0;
 
   // Helper to aggregate data by key
   const aggregateData = (assets, key) => {
@@ -326,7 +329,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
         {/* Category Totals */}
         <div
           className={`grid grid-cols-2 ${
-            categoryName === "Epargne" ? "sm:grid-cols-5" : "sm:grid-cols-4"
+            hasManualAssets ? "sm:grid-cols-5" : "sm:grid-cols-4"
           } gap-4`}
         >
           <div className="bg-dark-hover rounded-xl p-4">
@@ -389,8 +392,8 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
             </div>
           </div>
 
-          {/* New Card for Epargne - YTD Yield */}
-          {categoryName === "Epargne" && (
+          {/* New Card for Manual Assets - YTD Yield */}
+          {hasManualAssets && (
             <div className="bg-dark-hover rounded-xl p-4">
               <p className="text-xs text-text-muted uppercase tracking-wide mb-2">
                 Rendement YTD
@@ -407,7 +410,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
       </motion.div>
 
       {/* Pie Charts - Region and Sector Distribution */}
-      {categoryName !== "Epargne" && enrichedAssets.length > 0 && (
+      {enrichedAssets.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Region Chart */}
           <motion.div
@@ -727,12 +730,10 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                 {/* Asset Metrics Grid */}
                 <div
                   className={`grid ${
-                    categoryName === "Epargne"
-                      ? "grid-cols-1"
-                      : "grid-cols-2 sm:grid-cols-4"
+                    !asset.symbol ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"
                   } gap-3 mb-4`}
                 >
-                  {categoryName !== "Epargne" && (
+                  {asset.symbol && (
                     <>
                       <div>
                         <p className="text-xs text-text-muted mb-1">Quantité</p>
@@ -831,10 +832,8 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                   </div>
                 </div>
 
-                {/* Savings Yield Control - Only for Epargne category */}
-                {categoryName === "Epargne" && (
-                  <SavingsYieldControl asset={asset} />
-                )}
+                {/* Savings Yield Control - Only for manual assets (no symbol) */}
+                {!asset.symbol && <SavingsYieldControl asset={asset} />}
               </motion.div>
             );
           })}
