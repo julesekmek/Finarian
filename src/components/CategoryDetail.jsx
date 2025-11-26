@@ -677,9 +677,9 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                 className="bg-gradient-card border border-border-subtle rounded-xl p-5 hover:border-accent-primary/30 transition-all"
               >
                 {/* Asset Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                <div className="flex justify-between items-start mb-4 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="font-semibold text-text-primary text-lg">
                         {asset.name}
                       </h3>
@@ -691,7 +691,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                     </div>
                   </div>
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleOpenEdit(asset)}
                       className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"

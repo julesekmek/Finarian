@@ -3,12 +3,14 @@
  * Minimalist design with smooth animations
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Loader2 } from "lucide-react";
 import { assetService } from "../services/assetService";
 import { authService } from "../services/authService";
 import { backfillHistory } from "../services/priceService";
+import YahooFinanceAutocomplete from "./YahooFinanceAutocomplete";
 
 export default function AddAssetForm({ userId }) {
   const [showModal, setShowModal] = useState(false);
@@ -22,6 +24,18 @@ export default function AddAssetForm({ userId }) {
   const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showModal]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,211 +156,225 @@ export default function AddAssetForm({ userId }) {
       </motion.button>
 
       {/* Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
-              onClick={handleClose}
-            />
-
-            {/* Modal Content */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {createPortal(
+        <AnimatePresence>
+          {showModal && (
+            <>
+              {/* Backdrop */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-md bg-dark-card border border-border-subtle rounded-2xl shadow-card p-6"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-text-primary">
-                    Ajouter un actif
-                  </h2>
-                  <button
-                    onClick={handleClose}
-                    disabled={loading}
-                    className="p-2 rounded-xl hover:bg-dark-hover text-text-muted hover:text-text-primary transition-all disabled:opacity-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
+                onClick={handleClose}
+              />
+
+              {/* Modal Container - Scrollable */}
+              <div className="fixed inset-0 z-50 overflow-y-auto">
+                <div className="flex min-h-full items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="relative w-full max-w-md bg-dark-card border border-border-subtle rounded-2xl shadow-card p-6"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <X className="w-5 h-5" />
-                  </button>
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-text-primary">
+                        Ajouter un actif
+                      </h2>
+                      <button
+                        onClick={handleClose}
+                        disabled={loading}
+                        className="p-2 rounded-xl hover:bg-dark-hover text-text-muted hover:text-text-primary transition-all disabled:opacity-50"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      {/* Asset Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                          Nom de l'actif{" "}
+                          <span className="text-accent-red">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="ex: Épargne, Actions Apple"
+                          className="input-field w-full"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      {/* Category */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                          Catégorie <span className="text-accent-red">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                          placeholder="ex: Cash, Actions, Immobilier"
+                          className="input-field w-full"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      {/* Symbol */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                          Symbole Yahoo Finance{" "}
+                          <span className="text-text-muted text-xs">
+                            (optionnel)
+                          </span>
+                        </label>
+                        <YahooFinanceAutocomplete
+                          value={symbol}
+                          onChange={setSymbol}
+                          onSymbolSelect={(result) => {
+                            // Auto-fill name if empty
+                            if (!name.trim()) {
+                              setName(
+                                result.shortName ||
+                                  result.longName ||
+                                  result.symbol
+                              );
+                            }
+                          }}
+                          disabled={loading}
+                          placeholder="ex: AAPL, MSFT, BTC-USD"
+                        />
+                        <p className="text-xs text-text-muted mt-1">
+                          Pour une mise à jour automatique des prix
+                        </p>
+                      </div>
+
+                      {/* Region and Sector */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-2">
+                            Zone géographique
+                          </label>
+                          <input
+                            type="text"
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            placeholder="ex: Europe, US"
+                            className="input-field w-full"
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-2">
+                            Domaine d'activité
+                          </label>
+                          <input
+                            type="text"
+                            value={sector}
+                            onChange={(e) => setSector(e.target.value)}
+                            placeholder="ex: Tech, Santé"
+                            className="input-field w-full"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quantity and Purchase Price */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-2">
+                            Quantité <span className="text-accent-red">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            placeholder="1.00"
+                            className="input-field w-full"
+                            disabled={loading}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-2">
+                            Prix d'achat (€){" "}
+                            <span className="text-accent-red">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={purchasePrice}
+                            onChange={(e) => setPurchasePrice(e.target.value)}
+                            placeholder="0.00"
+                            className="input-field w-full"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Current Price */}
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                          Prix actuel (€){" "}
+                          <span className="text-text-muted text-xs">
+                            (optionnel)
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={currentPrice}
+                          onChange={(e) => setCurrentPrice(e.target.value)}
+                          placeholder="0.00"
+                          className="input-field w-full"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      {/* Error Message */}
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm p-3 rounded-xl bg-accent-red/10 text-accent-red border border-accent-red/20"
+                        >
+                          {error}
+                        </motion.div>
+                      )}
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn-primary w-full flex items-center justify-center gap-2"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Ajout en cours...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-5 h-5" />
+                            <span>Ajouter l'actif</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </motion.div>
                 </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Asset Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Nom de l'actif <span className="text-accent-red">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="ex: Épargne, Actions Apple"
-                      className="input-field w-full"
-                      disabled={loading}
-                    />
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Catégorie <span className="text-accent-red">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="ex: Cash, Actions, Immobilier"
-                      className="input-field w-full"
-                      disabled={loading}
-                    />
-                  </div>
-
-                  {/* Symbol */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Symbole Yahoo Finance{" "}
-                      <span className="text-text-muted text-xs">
-                        (optionnel)
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      value={symbol}
-                      onChange={(e) => setSymbol(e.target.value)}
-                      placeholder="ex: AAPL, MSFT, BTC-USD"
-                      className="input-field w-full"
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-text-muted mt-1">
-                      Pour une mise à jour automatique des prix
-                    </p>
-                  </div>
-
-                  {/* Region and Sector */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Zone géographique
-                      </label>
-                      <input
-                        type="text"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="ex: Europe, US"
-                        className="input-field w-full"
-                        disabled={loading}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Domaine d'activité
-                      </label>
-                      <input
-                        type="text"
-                        value={sector}
-                        onChange={(e) => setSector(e.target.value)}
-                        placeholder="ex: Tech, Santé"
-                        className="input-field w-full"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Quantity and Purchase Price */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Quantité <span className="text-accent-red">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="1.00"
-                        className="input-field w-full"
-                        disabled={loading}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Prix d'achat (€){" "}
-                        <span className="text-accent-red">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={purchasePrice}
-                        onChange={(e) => setPurchasePrice(e.target.value)}
-                        placeholder="0.00"
-                        className="input-field w-full"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Current Price */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Prix actuel (€){" "}
-                      <span className="text-text-muted text-xs">
-                        (optionnel)
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={currentPrice}
-                      onChange={(e) => setCurrentPrice(e.target.value)}
-                      placeholder="0.00"
-                      className="input-field w-full"
-                      disabled={loading}
-                    />
-                  </div>
-
-                  {/* Error Message */}
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-sm p-3 rounded-xl bg-accent-red/10 text-accent-red border border-accent-red/20"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-primary w-full flex items-center justify-center gap-2"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Ajout en cours...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-5 h-5" />
-                        <span>Ajouter l'actif</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+              </div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }

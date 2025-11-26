@@ -5,7 +5,14 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, TrendingUp, Loader2 } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  TrendingUp,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { authService } from "../services/authService";
 
 export default function Auth() {
@@ -22,18 +29,22 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        const { data } = await authService.signUp(email, password);
+        console.log("Starting signup process...");
+        const data = await authService.signUp(email, password);
+        console.log("Signup response:", data);
 
-        if (data?.user) {
-          setMessage(
-            "Account created! Please check your email for verification."
-          );
-        }
+        // Always show message if signup didn't throw an error
+        // Supabase signup is successful even if email confirmation is required
+        setMessage(
+          "Compte créé ! Veuillez vérifier votre email pour confirmer."
+        );
+        console.log("Message set successfully");
       } else {
         await authService.signIn(email, password);
       }
     } catch (error) {
-      setMessage(error.message);
+      console.error("Auth error:", error);
+      setMessage(error.message || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -80,8 +91,8 @@ export default function Auth() {
             className="text-text-secondary text-sm"
           >
             {isSignUp
-              ? "Create your account"
-              : "Welcome back! Sign in to continue"}
+              ? "Créer votre compte"
+              : "Bon retour ! Connectez-vous pour continuer"}
           </motion.p>
         </div>
 
@@ -106,7 +117,7 @@ export default function Auth() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="input-field w-full pl-12"
-                  placeholder="your@email.com"
+                  placeholder="votre@email.com"
                 />
               </div>
             </div>
@@ -114,7 +125,7 @@ export default function Auth() {
             {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Password
+                Mot de passe
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
@@ -130,19 +141,64 @@ export default function Auth() {
               </div>
             </div>
 
-            {/* Message Display */}
+            {/* Alert Banner */}
             {message && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`text-sm p-4 rounded-xl border ${
-                  message.includes("created") ||
-                  message.includes("verification")
-                    ? "bg-accent-primary/10 text-accent-primary border-accent-primary/20"
-                    : "bg-accent-red/10 text-accent-red border-accent-red/20"
+                className={`p-5 rounded-2xl border backdrop-blur-sm ${
+                  message.includes("créé") || message.includes("Compte créé")
+                    ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30"
+                    : "bg-accent-red/10 border-accent-red/20"
                 }`}
               >
-                {message}
+                <div className="flex items-start gap-4">
+                  {message.includes("créé") ||
+                  message.includes("Compte créé") ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-accent-red flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <h4
+                      className={`font-semibold mb-1 ${
+                        message.includes("créé") ||
+                        message.includes("Compte créé")
+                          ? "text-green-300"
+                          : "text-accent-red"
+                      }`}
+                    >
+                      {message.includes("créé") ||
+                      message.includes("Compte créé")
+                        ? "Compte en cours de création"
+                        : "Erreur"}
+                    </h4>
+                    <p
+                      className={`text-sm leading-relaxed ${
+                        message.includes("créé") ||
+                        message.includes("Compte créé")
+                          ? "text-green-100/90"
+                          : "text-accent-red/90"
+                      }`}
+                    >
+                      {message.includes("créé") ||
+                      message.includes("Compte créé") ? (
+                        <>
+                          Un email de confirmation a été envoyé à{" "}
+                          <span className="font-medium text-green-200">
+                            {email}
+                          </span>
+                          .
+                          <br />
+                          Veuillez cliquer sur le lien dans l'email pour activer
+                          votre compte.
+                        </>
+                      ) : (
+                        message
+                      )}
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -155,10 +211,10 @@ export default function Auth() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Loading...</span>
+                  <span>Chargement...</span>
                 </>
               ) : (
-                <span>{isSignUp ? "Sign Up" : "Sign In"}</span>
+                <span>{isSignUp ? "S'inscrire" : "Se connecter"}</span>
               )}
             </button>
           </form>
@@ -173,8 +229,8 @@ export default function Auth() {
               className="text-accent-beige hover:text-accent-beige/80 text-sm font-medium transition-colors"
             >
               {isSignUp
-                ? "Already have an account? Sign In"
-                : "Don't have an account? Sign Up"}
+                ? "Déjà un compte ? Se connecter"
+                : "Pas de compte ? S'inscrire"}
             </button>
           </div>
         </motion.div>
@@ -186,7 +242,7 @@ export default function Auth() {
           transition={{ delay: 0.5 }}
           className="text-center text-text-muted text-xs mt-6"
         >
-          Manage your portfolio with confidence
+          Gérez votre portefeuille en toute confiance
         </motion.p>
       </motion.div>
     </div>

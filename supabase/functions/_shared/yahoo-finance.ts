@@ -9,6 +9,18 @@ import { ExternalAPIError } from './errors.ts';
 import { HistoricalDataPoint, roundToDecimals } from './date-utils.ts';
 
 /**
+ * Symbol search result from Yahoo Finance
+ */
+export interface SymbolSearchResult {
+  symbol: string;
+  shortName: string;
+  longName: string;
+  type: string;
+  exchange: string;
+}
+
+
+/**
  * Yahoo Finance API client with retry logic and error handling
  */
 export class YahooFinanceClient {
@@ -45,6 +57,46 @@ export class YahooFinanceClient {
       );
     }
   }
+
+  /**
+   * Search for symbols using Yahoo Finance search API
+   * @param query - Search query (e.g., 'apple', 'bitcoin')
+   * @returns Array of search results with symbol, name, type, and exchange
+   */
+  async searchSymbols(query: string): Promise<SymbolSearchResult[]> {
+    try {
+      if (!query || query.trim().length === 0) {
+        return [];
+      }
+
+      const url = `${this.baseUrl}/v1/finance/search?q=${encodeURIComponent(query.trim())}`;
+      const data = await this.fetchWithRetry(url);
+
+      const quotes = data?.quotes || [];
+      
+      // Filter and format results
+      const results: SymbolSearchResult[] = quotes
+        .filter((quote: any) => quote.symbol && quote.quoteType)
+        .map((quote: any) => ({
+          symbol: quote.symbol,
+          shortName: quote.shortname || quote.symbol,
+          longName: quote.longname || quote.shortname || quote.symbol,
+          type: quote.quoteType || 'Unknown',
+          exchange: quote.exchDisp || quote.exchange || '',
+        }))
+        .slice(0, 10); // Limit to 10 results
+
+      console.log(`✓ Found ${results.length} symbols for query: ${query}`);
+      return results;
+    } catch (error) {
+      console.error(`Error searching symbols for "${query}":`, error);
+      throw new ExternalAPIError(
+        `Failed to search symbols for "${query}"`,
+        { query, originalError: error instanceof Error ? error.message : String(error) }
+      );
+    }
+  }
+
 
   /**
    * Fetch historical prices for a symbol
