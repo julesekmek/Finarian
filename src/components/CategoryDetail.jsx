@@ -19,12 +19,14 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { formatCurrency, formatDate } from "../lib/utils/formatters";
+import { formatCurrency, formatDate } from "../utils/formatters";
 import {
   calculateAssetMetrics,
   calculateCategoryMetrics,
-} from "../lib/utils/calculations";
-import { supabase } from "../lib/supabaseClient";
+} from "../utils/calculations";
+import { assetService } from "../services/assetService";
+import { authService } from "../services/authService";
+import { getLiveQuotes } from "../services/priceService";
 import EditAssetModal from "./EditAssetModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
@@ -56,12 +58,11 @@ const SavingsYieldControl = ({ asset }) => {
     const oldApy = parseFloat(asset.apy || 0);
 
     if (!isNaN(newApy) && newApy !== oldApy) {
-      const { error } = await supabase
-        .from("assets")
-        .update({ apy: newApy })
-        .eq("id", asset.id);
-
-      if (error) console.error("Error updating APY:", error);
+      try {
+        await assetService.updateAsset(asset.id, { apy: newApy });
+      } catch (error) {
+        console.error("Error updating APY:", error);
+      }
     }
   };
 
@@ -136,28 +137,9 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
       if (symbols.length === 0) return;
 
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-live-quotes`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${
-                session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY
-              }`,
-            },
-            body: JSON.stringify({ symbols }),
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          setLiveQuotes(data);
-        }
+        const session = await authService.getSession();
+        const data = await getLiveQuotes(symbols, session);
+        setLiveQuotes(data);
       } catch (error) {
         console.error("Error fetching live quotes:", error);
       }

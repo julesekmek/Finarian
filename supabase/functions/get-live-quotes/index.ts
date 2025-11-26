@@ -1,76 +1,52 @@
-import { corsHeaders } from "../_shared/cors.ts";
+/**
+ * Supabase Edge Function: get-live-quotes
+ * 
+ * Fetches real-time price quotes for multiple symbols
+ * Returns current price, change, and change percentage
+ * 
+ * Refactored for better error handling and timeout management
+ */
+
+import { corsHeaders } from '../_shared/cors.ts';
+import { formatErrorResponse, ValidationError } from '../_shared/errors.ts';
+import { CONSTANTS } from '../_shared/constants.ts';
+import { LiveQuotesService } from './service.ts';
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight request
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { symbols } = await req.json();
+    // 1. Parse and validate request
+    const body = await req.json();
+    const { symbols } = body;
 
     if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Missing or invalid symbols array" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      throw new ValidationError('symbols must be a non-empty array');
     }
 
-    const results: Record<string, any> = {};
+    // Validate each symbol is a string
+    if (!symbols.every((s) => typeof s === 'string')) {
+      throw new ValidationError('All symbols must be strings');
+    }
 
-    // Fetch in parallel
-    await Promise.all(
-      symbols.map(async (symbol) => {
-        try {
-          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-            symbol
-          )}`;
-          const response = await fetch(url, {
-            headers: { "User-Agent": "Mozilla/5.0 (Finarian App)" },
-          });
+    // 2. Fetch live quotes
+    const service = new LiveQuotesService();
+    const results = await service.fetchLiveQuotes(symbols);
 
-          if (response.ok) {
-            const data = await response.json();
-            const result = data?.chart?.result?.[0];
-            const meta = result?.meta;
-
-            if (meta) {
-              const price = meta.regularMarketPrice;
-              const prevClose = meta.previousClose || meta.chartPreviousClose;
-
-              if (typeof price === "number" && typeof prevClose === "number") {
-                const change = price - prevClose;
-                const changePercent = (change / prevClose) * 100;
-
-                results[symbol] = {
-                  price,
-                  change,
-                  changePercent,
-                };
-              }
-            }
-          }
-        } catch (e) {
-          console.error(`Error fetching ${symbol}:`, e);
-        }
-      })
-    );
-
+    // 3. Return results
     return new Response(JSON.stringify(results), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: CONSTANTS.HTTP_STATUS.OK,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    // Handle all errors
+    const { body, status } = formatErrorResponse(error);
+    return new Response(body, {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -6,7 +6,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Loader2 } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
+import { assetService } from "../services/assetService";
+import { authService } from "../services/authService";
+import { backfillHistory } from "../services/priceService";
 
 export default function AddAssetForm({ userId }) {
   const [showModal, setShowModal] = useState(false);
@@ -58,54 +60,32 @@ export default function AddAssetForm({ userId }) {
     setError("");
 
     try {
-      const { data: newAsset, error: insertError } = await supabase
-        .from("assets")
-        .insert({
-          name: name.trim(),
-          category: category.trim(),
-          symbol: symbol.trim() || null,
-          quantity: numericQuantity,
-          purchase_price: numericPurchasePrice,
-          current_price: numericCurrentPrice,
-          region: region.trim() || null,
-          sector: sector.trim() || null,
-          user_id: userId,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
+      const newAsset = await assetService.createAsset({
+        user_id: userId,
+        name: name.trim(),
+        category: category.trim(),
+        symbol: symbol.trim() || null,
+        quantity: numericQuantity,
+        purchase_price: numericPurchasePrice,
+        current_price: numericCurrentPrice,
+        region: region.trim() || null,
+        sector: sector.trim() || null,
+      });
 
       // 🎯 Backfill historical data (YTD from 2025-01-02)
       if (newAsset) {
         console.log(`Backfilling YTD historical data for ${newAsset.name}...`);
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const session = await authService.getSession();
 
         if (session) {
           try {
-            // Prepare request body based on asset type
-            const body = symbol.trim()
-              ? { assetId: newAsset.id, symbol: symbol.trim() }
-              : { assetId: newAsset.id, referencePrice: numericCurrentPrice };
-
-            const response = await fetch(
-              `${
-                import.meta.env.VITE_SUPABASE_URL
-              }/functions/v1/fetch-historical-prices`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(body),
-              }
+            const result = await backfillHistory(
+              newAsset.id,
+              symbol.trim(),
+              numericCurrentPrice,
+              session
             );
-
-            const result = await response.json();
 
             if (result.success) {
               console.log(

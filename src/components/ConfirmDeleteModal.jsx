@@ -3,59 +3,54 @@
  * Clean dark mode design with clear warning
  */
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { X, Trash2, AlertTriangle, Loader2 } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { X, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { assetService } from "../services/assetService";
 
 export default function ConfirmDeleteModal({ asset, onClose, onConfirm }) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Handle ESC key to close
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && !loading) {
-        onClose()
+      if (e.key === "Escape" && !loading) {
+        onClose();
       }
-    }
-    
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [onClose, loading])
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose, loading]);
 
   const handleDelete = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
-      const { error: deleteError } = await supabase
-        .from('assets')
-        .delete()
-        .eq('id', asset.id)
-
-      if (deleteError) throw deleteError
+      await assetService.deleteAsset(asset.id);
 
       if (onConfirm) {
-        onConfirm(asset.id)
+        onConfirm(asset.id);
       }
 
-      onClose()
+      onClose();
     } catch (err) {
-      console.error('Error deleting asset:', err)
-      setError(err.message || 'Erreur lors de la suppression')
+      console.error("Error deleting asset:", err);
+      setError(err.message || "Erreur lors de la suppression");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !loading) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
-  if (!asset) return null
+  if (!asset) return null;
 
   return (
     <>
@@ -115,7 +110,8 @@ export default function ConfirmDeleteModal({ asset, onClose, onConfirm }) {
           <div className="flex items-start gap-3 bg-accent-red/10 border border-accent-red/20 rounded-xl p-4 mb-6">
             <AlertTriangle className="w-5 h-5 text-accent-red flex-shrink-0 mt-0.5" />
             <p className="text-sm text-accent-red">
-              Êtes-vous sûr de vouloir supprimer cet actif ? Toutes les données associées seront perdues.
+              Êtes-vous sûr de vouloir supprimer cet actif ? Toutes les données
+              associées seront perdues.
             </p>
           </div>
 
@@ -162,5 +158,5 @@ export default function ConfirmDeleteModal({ asset, onClose, onConfirm }) {
         </motion.div>
       </div>
     </>
-  )
+  );
 }

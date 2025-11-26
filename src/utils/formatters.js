@@ -3,7 +3,7 @@
  * Centralizes all display formatting logic
  */
 
-import { CURRENCY } from './constants'
+import { CURRENCY } from "../constants";
 
 /**
  * Format a number as currency
@@ -16,15 +16,15 @@ export function formatCurrency(value, options = {}) {
     locale = CURRENCY.LOCALE,
     currency = CURRENCY.CODE,
     minimumFractionDigits = 2,
-    maximumFractionDigits = 2
-  } = options
+    maximumFractionDigits = 2,
+  } = options;
 
   return new Intl.NumberFormat(locale, {
-    style: 'currency',
+    style: "currency",
     currency,
     minimumFractionDigits,
-    maximumFractionDigits
-  }).format(value)
+    maximumFractionDigits,
+  }).format(value);
 }
 
 /**
@@ -36,14 +36,14 @@ export function formatCurrency(value, options = {}) {
 export function formatDate(dateInput, options = {}) {
   const {
     locale = CURRENCY.LOCALE,
-    year = 'numeric',
-    month = 'short',
-    day = 'numeric'
-  } = options
+    year = "numeric",
+    month = "short",
+    day = "numeric",
+  } = options;
 
-  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
 
-  return date.toLocaleDateString(locale, { year, month, day })
+  return date.toLocaleDateString(locale, { year, month, day });
 }
 
 /**
@@ -52,8 +52,8 @@ export function formatDate(dateInput, options = {}) {
  * @returns {string} Formatted date string (e.g., "15/01")
  */
 export function formatShortDate(dateInput) {
-  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
-  return `${date.getDate()}/${date.getMonth() + 1}`
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  return `${date.getDate()}/${date.getMonth() + 1}`;
 }
 
 /**
@@ -63,8 +63,8 @@ export function formatShortDate(dateInput) {
  * @returns {number} Rounded number
  */
 export function roundToDecimals(value, decimals = 2) {
-  const multiplier = Math.pow(10, decimals)
-  return Math.round(value * multiplier) / multiplier
+  const multiplier = Math.pow(10, decimals);
+  return Math.round(value * multiplier) / multiplier;
 }
 
 /**
@@ -73,7 +73,7 @@ export function roundToDecimals(value, decimals = 2) {
  * @returns {string} Number with sign prefix
  */
 export function formatWithSign(value) {
-  return value >= 0 ? `+${value}` : `${value}`
+  return value >= 0 ? `+${value}` : `${value}`;
 }
 
 /**
@@ -83,6 +83,5 @@ export function formatWithSign(value) {
  * @returns {string} Formatted percentage string
  */
 export function formatPercentage(value, decimals = 2) {
-  return `${formatWithSign(value.toFixed(decimals))}%`
+  return `${formatWithSign(value.toFixed(decimals))}%`;
 }
-

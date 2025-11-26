@@ -13,8 +13,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-import { callUpdatePrices } from "../lib/updatePrices";
+import { authService } from "../services/authService";
+import { callUpdatePrices } from "../services/priceService";
 
 export default function Sidebar({
   currentPage,
@@ -25,8 +25,11 @@ export default function Sidebar({
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error signing out:", error);
+    try {
+      await authService.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleUpdatePrices = async () => {

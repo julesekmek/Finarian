@@ -3,49 +3,41 @@
  * Inspired by Finary design with glassmorphism and smooth animations
  */
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Mail, Lock, TrendingUp, Loader2 } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Mail, Lock, TrendingUp, Loader2 } from "lucide-react";
+import { authService } from "../services/authService";
 
 export default function Auth() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleAuth = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
-        
-        if (error) throw error
-        
+        const { data } = await authService.signUp(email, password);
+
         if (data?.user) {
-          setMessage('Account created! Please check your email for verification.')
+          setMessage(
+            "Account created! Please check your email for verification."
+          );
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        
-        if (error) throw error
+        await authService.signIn(email, password);
       }
     } catch (error) {
-      setMessage(error.message)
+      setMessage(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-dark flex items-center justify-center px-4 py-8">
@@ -71,7 +63,7 @@ export default function Auth() {
           >
             <TrendingUp className="w-8 h-8 text-white" />
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -80,14 +72,16 @@ export default function Auth() {
           >
             Finarian
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
             className="text-text-secondary text-sm"
           >
-            {isSignUp ? 'Create your account' : 'Welcome back! Sign in to continue'}
+            {isSignUp
+              ? "Create your account"
+              : "Welcome back! Sign in to continue"}
           </motion.p>
         </div>
 
@@ -142,9 +136,10 @@ export default function Auth() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`text-sm p-4 rounded-xl border ${
-                  message.includes('created') || message.includes('verification')
-                    ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/20'
-                    : 'bg-accent-red/10 text-accent-red border-accent-red/20'
+                  message.includes("created") ||
+                  message.includes("verification")
+                    ? "bg-accent-primary/10 text-accent-primary border-accent-primary/20"
+                    : "bg-accent-red/10 text-accent-red border-accent-red/20"
                 }`}
               >
                 {message}
@@ -163,7 +158,7 @@ export default function Auth() {
                   <span>Loading...</span>
                 </>
               ) : (
-                <span>{isSignUp ? 'Sign Up' : 'Sign In'}</span>
+                <span>{isSignUp ? "Sign Up" : "Sign In"}</span>
               )}
             </button>
           </form>
@@ -172,13 +167,13 @@ export default function Auth() {
           <div className="mt-6 pt-6 border-t border-border-subtle text-center">
             <button
               onClick={() => {
-                setIsSignUp(!isSignUp)
-                setMessage('')
+                setIsSignUp(!isSignUp);
+                setMessage("");
               }}
               className="text-accent-beige hover:text-accent-beige/80 text-sm font-medium transition-colors"
             >
               {isSignUp
-                ? 'Already have an account? Sign In'
+                ? "Already have an account? Sign In"
                 : "Don't have an account? Sign Up"}
             </button>
           </div>
@@ -195,6 +190,5 @@ export default function Auth() {
         </motion.p>
       </motion.div>
     </div>
-  )
+  );
 }
-

@@ -3,106 +3,97 @@
  * Beautiful horizontal cards with swipe actions
  */
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { TrendingUp, TrendingDown, Edit, Trash2, Wallet } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
-import EditAssetModal from './EditAssetModal'
-import ConfirmDeleteModal from './ConfirmDeleteModal'
-import { formatCurrency, formatDate } from '../lib/utils/formatters'
-import { calculateAssetMetrics } from '../lib/utils/calculations'
-import { REALTIME_CHANNELS } from '../lib/utils/constants'
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { TrendingUp, TrendingDown, Edit, Trash2, Wallet } from "lucide-react";
+import { assetService } from "../services/assetService";
+import EditAssetModal from "./EditAssetModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import { formatCurrency, formatDate } from "../utils/formatters";
+import { calculateAssetMetrics } from "../utils/calculations";
+import { REALTIME_CHANNELS } from "../constants";
 
 export default function AssetList({ userId }) {
-  const [assets, setAssets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedAsset, setSelectedAsset] = useState(null)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Fetch assets from Supabase
   const fetchAssets = async () => {
     try {
-      const { data, error } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('user_id', userId)
-        .order('last_updated', { ascending: false })
-
-      if (error) throw error
-      setAssets(data || [])
+      const data = await assetService.fetchAssets(userId);
+      setAssets(data);
     } catch (error) {
-      console.error('Error fetching assets:', error)
+      console.error("Error fetching assets:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Set up realtime subscription
   useEffect(() => {
-    fetchAssets()
+    fetchAssets();
 
-    const channel = supabase
-      .channel(REALTIME_CHANNELS.ASSETS)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'assets' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            if (payload.new.user_id === userId) {
-              setAssets((prev) => [payload.new, ...prev])
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            if (payload.new.user_id === userId) {
-              setAssets((prev) =>
-                prev.map((asset) =>
-                  asset.id === payload.new.id ? payload.new : asset
-                )
-              )
-            }
-          } else if (payload.eventType === 'DELETE') {
-            setAssets((prev) => prev.filter((asset) => asset.id !== payload.old.id))
-          }
+    const channel = assetService.subscribeToAssets(userId, (payload) => {
+      if (payload.eventType === "INSERT") {
+        if (payload.new.user_id === userId) {
+          setAssets((prev) => [payload.new, ...prev]);
         }
-      )
-      .subscribe()
+      } else if (payload.eventType === "UPDATE") {
+        if (payload.new.user_id === userId) {
+          setAssets((prev) =>
+            prev.map((asset) =>
+              asset.id === payload.new.id ? payload.new : asset
+            )
+          );
+        }
+      } else if (payload.eventType === "DELETE") {
+        setAssets((prev) =>
+          prev.filter((asset) => asset.id !== payload.old.id)
+        );
+      }
+    });
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [userId])
+      assetService.removeChannel(channel);
+    };
+  }, [userId]);
 
   const handleOpenEdit = (asset) => {
-    setSelectedAsset(asset)
-    setShowEditModal(true)
-  }
+    setSelectedAsset(asset);
+    setShowEditModal(true);
+  };
 
   const handleCloseEdit = () => {
-    setShowEditModal(false)
-    setSelectedAsset(null)
-  }
+    setShowEditModal(false);
+    setSelectedAsset(null);
+  };
 
   const handleSaveEdit = (updatedAsset) => {
     setAssets((prevAssets) =>
       prevAssets.map((asset) =>
         asset.id === updatedAsset.id ? updatedAsset : asset
       )
-    )
-  }
+    );
+  };
 
   const handleOpenDelete = (asset) => {
-    setSelectedAsset(asset)
-    setShowDeleteModal(true)
-  }
+    setSelectedAsset(asset);
+    setShowDeleteModal(true);
+  };
 
   const handleCloseDelete = () => {
-    setShowDeleteModal(false)
-    setSelectedAsset(null)
-  }
+    setShowDeleteModal(false);
+    setSelectedAsset(null);
+  };
 
   const handleConfirmDelete = (assetId) => {
-    setAssets((prevAssets) => prevAssets.filter((asset) => asset.id !== assetId))
-  }
+    setAssets((prevAssets) =>
+      prevAssets.filter((asset) => asset.id !== assetId)
+    );
+  };
 
   if (loading) {
     return (
@@ -118,7 +109,7 @@ export default function AssetList({ userId }) {
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
 
   if (assets.length === 0) {
@@ -142,7 +133,7 @@ export default function AssetList({ userId }) {
           </p>
         </div>
       </motion.div>
-    )
+    );
   }
 
   return (
@@ -156,11 +147,11 @@ export default function AssetList({ userId }) {
           <Wallet className="w-6 h-6 text-accent-primary" />
           Vos actifs
         </h2>
-        
+
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">
             {assets.map((asset, index) => {
-              const metrics = calculateAssetMetrics(asset)
+              const metrics = calculateAssetMetrics(asset);
 
               return (
                 <motion.div
@@ -212,42 +203,65 @@ export default function AssetList({ userId }) {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                     <div>
                       <p className="text-xs text-text-muted mb-1">Quantité</p>
-                      <p className="font-semibold text-text-primary">{metrics.quantity.toFixed(2)}</p>
+                      <p className="font-semibold text-text-primary">
+                        {metrics.quantity.toFixed(2)}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-text-muted mb-1">Prix d'achat</p>
-                      <p className="font-semibold text-text-primary">{formatCurrency(metrics.purchasePrice)}</p>
+                      <p className="text-xs text-text-muted mb-1">
+                        Prix d'achat
+                      </p>
+                      <p className="font-semibold text-text-primary">
+                        {formatCurrency(metrics.purchasePrice)}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-text-muted mb-1">Prix actuel</p>
-                      <p className="font-semibold text-text-primary">{formatCurrency(metrics.currentPrice)}</p>
+                      <p className="text-xs text-text-muted mb-1">
+                        Prix actuel
+                      </p>
+                      <p className="font-semibold text-text-primary">
+                        {formatCurrency(metrics.currentPrice)}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-text-muted mb-1">Investissement</p>
-                      <p className="font-semibold text-text-primary">{formatCurrency(metrics.totalPurchaseValue)}</p>
+                      <p className="text-xs text-text-muted mb-1">
+                        Investissement
+                      </p>
+                      <p className="font-semibold text-text-primary">
+                        {formatCurrency(metrics.totalPurchaseValue)}
+                      </p>
                     </div>
                   </div>
 
                   {/* Value and Performance */}
                   <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
                     <div>
-                      <p className="text-xs text-text-muted mb-1">Valeur actuelle</p>
+                      <p className="text-xs text-text-muted mb-1">
+                        Valeur actuelle
+                      </p>
                       <p className="text-2xl font-bold text-accent-beige">
                         {formatCurrency(metrics.totalCurrentValue)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-text-muted mb-1">Plus/Moins-value</p>
+                      <p className="text-xs text-text-muted mb-1">
+                        Plus/Moins-value
+                      </p>
                       <div className="flex items-center gap-1 justify-end">
                         {metrics.isPositive ? (
                           <TrendingUp className="w-5 h-5 text-accent-green" />
                         ) : (
                           <TrendingDown className="w-5 h-5 text-accent-red" />
                         )}
-                        <p className={`text-xl font-bold ${
-                          metrics.isPositive ? 'text-accent-green' : 'text-accent-red'
-                        }`}>
-                          {metrics.isPositive ? '+' : ''}{formatCurrency(metrics.unrealizedGain)}
+                        <p
+                          className={`text-xl font-bold ${
+                            metrics.isPositive
+                              ? "text-accent-green"
+                              : "text-accent-red"
+                          }`}
+                        >
+                          {metrics.isPositive ? "+" : ""}
+                          {formatCurrency(metrics.unrealizedGain)}
                         </p>
                       </div>
                     </div>
@@ -258,7 +272,7 @@ export default function AssetList({ userId }) {
                     Mis à jour: {formatDate(asset.last_updated)}
                   </p>
                 </motion.div>
-              )
+              );
             })}
           </AnimatePresence>
         </div>
@@ -281,5 +295,5 @@ export default function AssetList({ userId }) {
         />
       )}
     </>
-  )
+  );
 }

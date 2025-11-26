@@ -20,15 +20,15 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Activity, RefreshCw } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../services/supabase";
 import {
   getPortfolioHistory,
   calculatePerformanceMetrics,
-} from "../lib/portfolioHistory";
-import { formatCurrency, formatShortDate } from "../lib/utils/formatters";
-import { DEFAULT_PERIOD, CHART_PERIODS } from "../lib/utils/constants";
-import { usePullToRefresh } from "../lib/hooks/usePullToRefresh";
-import { callUpdatePrices } from "../lib/updatePrices";
+} from "../services/portfolioService";
+import { formatCurrency, formatShortDate } from "../utils/formatters";
+import { DEFAULT_PERIOD, CHART_PERIODS } from "../constants";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { callUpdatePrices } from "../services/priceService";
 
 export default function PortfolioChart({ userId }) {
   // Chart filter state (only affects chart display, not KPIs)

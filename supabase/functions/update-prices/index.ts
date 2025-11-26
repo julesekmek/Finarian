@@ -1,326 +1,65 @@
-// Supabase Edge Function to update asset prices from Yahoo Finance
-// This function fetches current prices and updates the database
-
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
-
-interface Asset {
-  id: string;
-  symbol: string | null;
-  name: string;
-  current_price: number;
-}
-
-interface YahooFinanceQuote {
-  regularMarketPrice?: number;
-  symbol?: string;
-}
-
 /**
- * Fetch price from Yahoo Finance API
- * Uses the Yahoo Finance V8 API (unofficial but reliable)
+ * Supabase Edge Function: update-prices
+ * 
+ * Updates current prices for all assets from Yahoo Finance
+ * - For market assets (with symbol): fetches from Yahoo Finance
+ * - For savings assets (no symbol): uses previous day's price
+ * 
+ * Supports both user authentication and service role (for automated workflows)
+ * 
+ * Refactored for better performance, error handling, and maintainability
  */
-async function fetchYahooPrice(symbol: string): Promise<number | null> {
-  try {
-    // Yahoo Finance V8 API endpoint
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-      symbol
-    )}`;
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Finarian App)",
-      },
-    });
-
-    if (!response.ok) {
-      console.error(
-        `Yahoo Finance API error for ${symbol}: ${response.status}`
-      );
-      return null;
-    }
-
-    const data = await response.json();
-
-    // Extract the current price from the response
-    const result = data?.chart?.result?.[0];
-    const price = result?.meta?.regularMarketPrice;
-
-    if (typeof price === "number" && !isNaN(price)) {
-      return price;
-    }
-
-    console.warn(`No valid price found for symbol: ${symbol}`);
-    return null;
-  } catch (error) {
-    console.error(`Error fetching price for ${symbol}:`, error);
-    return null;
-  }
-}
-
-/**
- * Get the price from the previous day's asset_history
- * Used for assets without symbols (manual assets like real estate, art, etc.)
- */
-async function getPreviousDayPrice(
-  supabaseAdmin: any,
-  assetId: string
-): Promise<number | null> {
-  try {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-    const { data, error } = await supabaseAdmin
-      .from("asset_history")
-      .select("price")
-      .eq("asset_id", assetId)
-      .eq("date", yesterdayStr)
-      .single();
-
-    if (error || !data) {
-      console.warn(`No previous day price found for asset ${assetId}`);
-      return null;
-    }
-
-    return data.price;
-  } catch (error) {
-    console.error(`Error fetching previous day price for ${assetId}:`, error);
-    return null;
-  }
-}
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+import { formatErrorResponse } from '../_shared/errors.ts';
+import { verifyAuth, getAuthHeader } from '../_shared/auth.ts';
+import { CONSTANTS } from '../_shared/constants.ts';
+import { PriceUpdateService } from './service.ts';
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Verify authentication
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // 1. Initialize Supabase client with service role
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Initialize Supabase client with service role for admin operations
-    // These env vars are automatically provided by Supabase Edge Runtime
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Extract token from header
-    const token = authHeader.replace("Bearer ", "");
-
-    // Detect if this is a Service Role Key (for automated workflows)
-    const isServiceRole = token === supabaseServiceKey;
-
-    let userId: string | null = null;
-
-    if (isServiceRole) {
-      console.log(
-        "🤖 Service Role authentication detected - updating all users"
-      );
-    } else {
-      // Verify the user's token is valid
-      const {
-        data: { user },
-        error: authError,
-      } = await supabaseAdmin.auth.getUser(token);
-
-      if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Invalid or expired token" }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      userId = user.id;
-      console.log(
-        `👤 User authentication detected - updating user: ${user.id}`
-      );
-    }
-
-    // Fetch all assets (with and without symbols)
-    // If Service Role: fetch ALL users' assets
-    // If User token: fetch only that user's assets
-    let query = supabaseAdmin
-      .from("assets")
-      .select("id, symbol, name, current_price, user_id");
-
-    if (!isServiceRole && userId) {
-      query = query.eq("user_id", userId);
-    }
-
-    const { data: assets, error: fetchError } = await query;
-
-    if (fetchError) {
-      throw new Error(`Failed to fetch assets: ${fetchError.message}`);
-    }
-
-    if (!assets || assets.length === 0) {
-      return new Response(
-        JSON.stringify({
-          message: "No assets with symbols found",
-          updated: 0,
-          failed: 0,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    console.log(`Found ${assets.length} assets to update`);
-
-    // Update prices for all assets
-    const updates: Array<{
-      id: string;
-      price: number;
-      symbol: string;
-      user_id: string;
-    }> = [];
-    const failures: Array<{ id: string; symbol: string; reason: string }> = [];
-
-    for (const asset of assets as Asset[]) {
-      let price: number | null = null;
-      let priceSource = "";
-
-      if (asset.symbol) {
-        // Asset has a symbol: fetch from Yahoo Finance
-        price = await fetchYahooPrice(asset.symbol);
-        priceSource = "Yahoo Finance";
-
-        // Small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } else {
-        // Asset has no symbol: use previous day's price
-        price = await getPreviousDayPrice(supabaseAdmin, asset.id);
-
-        if (price === null) {
-          // Fallback: use current_price if no history exists
-          price = asset.current_price;
-          priceSource = "current_price (fallback)";
-        } else {
-          priceSource = "previous day";
-        }
-      }
-
-      if (price !== null && price > 0) {
-        updates.push({
-          id: asset.id,
-          price,
-          symbol: asset.symbol || asset.name,
-          user_id: (asset as any).user_id, // Include user_id for database updates
-        });
-        console.log(
-          `✓ Queued ${
-            asset.symbol || asset.name
-          }: ${price} (source: ${priceSource})`
-        );
-      } else {
-        failures.push({
-          id: asset.id,
-          symbol: asset.symbol || asset.name,
-          reason: `No valid price found (source: ${priceSource})`,
-        });
-      }
-    }
-
-    // Batch update all successful price fetches + insert into history
-    if (updates.length > 0) {
-      const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
-
-      for (const update of updates) {
-        // 1. Update current_price in assets table
-        const { error: updateError } = await supabaseAdmin
-          .from("assets")
-          .update({
-            current_price: update.price,
-            last_updated: new Date().toISOString(),
-          })
-          .eq("id", update.id)
-          .eq("user_id", update.user_id);
-
-        if (updateError) {
-          console.error(`Failed to update asset ${update.id}:`, updateError);
-          failures.push({
-            id: update.id,
-            symbol: update.symbol,
-            reason: `Database update failed: ${updateError.message}`,
-          });
-        } else {
-          // 2. ✨ UPSERT into asset_history (1 point per day)
-          // If an entry for today exists, update it; otherwise insert
-          const { error: historyError } = await supabaseAdmin
-            .from("asset_history")
-            .upsert(
-              {
-                asset_id: update.id,
-                user_id: update.user_id,
-                price: update.price,
-                date: today,
-                recorded_at: new Date().toISOString(),
-              },
-              {
-                onConflict: "asset_id,date", // Conflict resolution on unique constraint
-                ignoreDuplicates: false, // Update if exists
-              }
-            );
-
-          if (historyError) {
-            console.error(
-              `Failed to upsert history for ${update.id}:`,
-              historyError
-            );
-            // Note: we don't fail the whole update, just log the error
-          } else {
-            console.log(
-              `✓ Updated ${update.symbol}: ${update.price} (daily snapshot recorded)`
-            );
-          }
-        }
-      }
-    }
-
-    // Return summary
-    return new Response(
-      JSON.stringify({
-        message: "Price update completed",
-        updated: updates.length,
-        failed: failures.length,
-        details: {
-          successes: updates.map((u) => ({ symbol: u.symbol, price: u.price })),
-          failures: failures.length > 0 ? failures : undefined,
-        },
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    // 2. Verify authentication
+    const authHeader = getAuthHeader(req);
+    const { userId, isServiceRole } = await verifyAuth(
+      supabaseAdmin,
+      authHeader,
+      supabaseServiceKey
     );
+
+    // 3. Determine scope (all users or specific user)
+    const targetUserId = isServiceRole ? null : userId;
+
+    // 4. Execute price update
+    const service = new PriceUpdateService();
+    const result = await service.updateAllPrices(supabaseAdmin, targetUserId);
+
+    // 5. Return success response
+    return new Response(JSON.stringify(result), {
+      status: CONSTANTS.HTTP_STATUS.OK,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error("Unexpected error in update-prices function:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    // Handle all errors
+    const { body, status } = formatErrorResponse(error);
+    return new Response(body, {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

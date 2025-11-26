@@ -13,10 +13,10 @@ import {
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
-import { formatCurrency } from "../lib/utils/formatters";
-import { calculateCategoryMetrics } from "../lib/utils/calculations";
-import { usePullToRefresh } from "../lib/hooks/usePullToRefresh";
-import { callUpdatePrices } from "../lib/updatePrices";
+import { formatCurrency } from "../utils/formatters";
+import { calculateCategoryMetrics } from "../utils/calculations";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { callUpdatePrices } from "../services/priceService";
 
 export default function CategoryEvolution({ assets, onCategoryClick }) {
   // Calculate category metrics using centralized utility

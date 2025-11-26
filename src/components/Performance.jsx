@@ -17,11 +17,11 @@ import AssetPerformanceCard from "./AssetPerformanceCard";
 import {
   getAllAssetsHistory,
   calculateAssetPerformance,
-} from "../lib/portfolioHistory";
-import { formatCurrency } from "../lib/utils/formatters";
-import { DEFAULT_PERIOD, CHART_PERIODS } from "../lib/utils/constants";
-import { usePullToRefresh } from "../lib/hooks/usePullToRefresh";
-import { callUpdatePrices } from "../lib/updatePrices";
+} from "../services/portfolioService";
+import { formatCurrency } from "../utils/formatters";
+import { DEFAULT_PERIOD, CHART_PERIODS } from "../constants";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { callUpdatePrices } from "../services/priceService";
 
 export default function Performance({ userId, assets }) {
   const [period, setPeriod] = useState(DEFAULT_PERIOD);

@@ -6,7 +6,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, Save, Loader2 } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
+import { assetService } from "../services/assetService";
+import { authService } from "../services/authService";
+import { backfillHistory } from "../services/priceService";
 
 export default function EditAssetModal({ asset, onClose, onSave }) {
   const [name, setName] = useState("");
@@ -78,39 +80,30 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
     setError("");
 
     try {
-      const { data, error: updateError } = await supabase
-        .from("assets")
-        .update({
-          name: name.trim(),
-          category: category.trim(),
-          symbol: symbol.trim() || null,
-          quantity: numericQuantity,
-          purchase_price: numericPurchasePrice,
-          current_price: numericCurrentPrice,
-          region: region.trim() || null,
-          sector: sector.trim() || null,
-          last_updated: new Date().toISOString(),
-        })
-        .eq("id", asset.id)
-        .select();
+      const data = await assetService.updateAsset(asset.id, {
+        name: name.trim(),
+        category: category.trim(),
+        symbol: symbol.trim() || null,
+        quantity: numericQuantity,
+        purchase_price: numericPurchasePrice,
+        current_price: numericCurrentPrice,
+        region: region.trim() || null,
+        sector: sector.trim() || null,
+        last_updated: new Date().toISOString(),
+      });
 
-      if (updateError) throw updateError;
-
-      const updatedAsset =
-        data && data.length > 0
-          ? data[0]
-          : {
-              ...asset,
-              name: name.trim(),
-              category: category.trim(),
-              symbol: symbol.trim() || null,
-              region: region.trim() || null,
-              sector: sector.trim() || null,
-              quantity: numericQuantity,
-              purchase_price: numericPurchasePrice,
-              current_price: numericCurrentPrice,
-              last_updated: new Date().toISOString(),
-            };
+      const updatedAsset = data || {
+        ...asset,
+        name: name.trim(),
+        category: category.trim(),
+        symbol: symbol.trim() || null,
+        region: region.trim() || null,
+        sector: sector.trim() || null,
+        quantity: numericQuantity,
+        purchase_price: numericPurchasePrice,
+        current_price: numericCurrentPrice,
+        last_updated: new Date().toISOString(),
+      };
 
       // 🎯 Backfill historical data (YTD from 2025-01-02)
       // This updates the entire YTD history with new values
@@ -118,36 +111,16 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         `Backfilling YTD historical data for ${updatedAsset.name}...`
       );
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const session = await authService.getSession();
 
       if (session) {
         try {
-          // Prepare request body based on asset type
-          const body = symbol.trim()
-            ? { assetId: asset.id, symbol: symbol.trim() }
-            : {
-                assetId: asset.id,
-                referencePrice: numericCurrentPrice,
-                isUpdate: true,
-              };
-
-          const response = await fetch(
-            `${
-              import.meta.env.VITE_SUPABASE_URL
-            }/functions/v1/fetch-historical-prices`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(body),
-            }
+          const result = await backfillHistory(
+            asset.id,
+            symbol.trim(),
+            numericCurrentPrice,
+            session
           );
-
-          const result = await response.json();
 
           if (result.success) {
             console.log(

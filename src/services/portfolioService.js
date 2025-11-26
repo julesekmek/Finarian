@@ -4,59 +4,59 @@
  * Provides aggregated views of portfolio performance over time
  */
 
-import { supabase } from './supabaseClient'
+import { supabase } from "../services/supabase";
 
 /**
  * Fetch ALL records from asset_history using pagination to bypass Supabase 1000 limit
- * 
+ *
  * @param {string} userId - User ID from auth
  * @param {string} startDateStr - Optional start date filter (ISO format YYYY-MM-DD)
  * @returns {Promise<Array>} All history records
  */
 async function fetchAllAssetHistory(userId, startDateStr = null) {
-  const BATCH_SIZE = 1000
-  let allData = []
-  let offset = 0
-  let hasMore = true
+  const BATCH_SIZE = 1000;
+  let allData = [];
+  let offset = 0;
+  let hasMore = true;
 
   while (hasMore) {
     let query = supabase
-      .from('asset_history')
-      .select('date, price, asset_id')
-      .eq('user_id', userId)
-      .order('date', { ascending: true })
-      .range(offset, offset + BATCH_SIZE - 1)
+      .from("asset_history")
+      .select("date, price, asset_id")
+      .eq("user_id", userId)
+      .order("date", { ascending: true })
+      .range(offset, offset + BATCH_SIZE - 1);
 
     // Apply date filter if provided
     if (startDateStr) {
-      query = query.gte('date', startDateStr)
+      query = query.gte("date", startDateStr);
     }
 
-    const { data, error } = await query
+    const { data, error } = await query;
 
-    if (error) throw error
+    if (error) throw error;
 
     if (data && data.length > 0) {
-      allData = allData.concat(data)
-      offset += BATCH_SIZE
-      
+      allData = allData.concat(data);
+      offset += BATCH_SIZE;
+
       // If we got less than BATCH_SIZE, we've reached the end
       if (data.length < BATCH_SIZE) {
-        hasMore = false
+        hasMore = false;
       }
     } else {
-      hasMore = false
+      hasMore = false;
     }
   }
 
-  return allData
+  return allData;
 }
 
 /**
  * Fetch portfolio value history for a given period
  * Returns daily snapshots of total portfolio value by aggregating all assets
  * Now supports fetching ALL data (>1000 records) via pagination
- * 
+ *
  * @param {string} userId - User ID from auth
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Array<{date: string, value: number}>>} Array of daily portfolio values
@@ -65,63 +65,63 @@ async function fetchAllAssetHistory(userId, startDateStr = null) {
 export async function getPortfolioHistory(userId, days = 30) {
   try {
     // Calculate start date if needed
-    let startDateStr = null
-    if (days !== 'all') {
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - days)
-      startDateStr = startDate.toISOString().split('T')[0]
+    let startDateStr = null;
+    if (days !== "all") {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      startDateStr = startDate.toISOString().split("T")[0];
     }
 
     // Fetch ALL asset history with pagination
-    const historyData = await fetchAllAssetHistory(userId, startDateStr)
+    const historyData = await fetchAllAssetHistory(userId, startDateStr);
 
     // Fetch current assets to get quantities
     const { data: assetsData, error: assetsError } = await supabase
-      .from('assets')
-      .select('id, quantity')
-      .eq('user_id', userId)
+      .from("assets")
+      .select("id, quantity")
+      .eq("user_id", userId);
 
-    if (assetsError) throw assetsError
+    if (assetsError) throw assetsError;
 
     // Create a map of asset quantities
-    const quantityMap = {}
-    assetsData.forEach(asset => {
-      quantityMap[asset.id] = asset.quantity
-    })
+    const quantityMap = {};
+    assetsData.forEach((asset) => {
+      quantityMap[asset.id] = asset.quantity;
+    });
 
     // Group history by date and calculate total value per day
-    const dailyValues = {}
-    
-    historyData.forEach(record => {
-      const date = record.date
-      const quantity = quantityMap[record.asset_id] || 0
-      const value = record.price * quantity
+    const dailyValues = {};
+
+    historyData.forEach((record) => {
+      const date = record.date;
+      const quantity = quantityMap[record.asset_id] || 0;
+      const value = record.price * quantity;
 
       if (!dailyValues[date]) {
-        dailyValues[date] = 0
+        dailyValues[date] = 0;
       }
-      dailyValues[date] += value
-    })
+      dailyValues[date] += value;
+    });
 
     // Convert to array format for charting
     const result = Object.entries(dailyValues).map(([date, value]) => ({
       date,
-      value: Math.round(value * 100) / 100 // Round to 2 decimals
-    }))
+      value: Math.round(value * 100) / 100, // Round to 2 decimals
+    }));
 
     // Sort by date ascending
-    result.sort((a, b) => new Date(a.date) - new Date(b.date))
+    result.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    return result
+    return result;
   } catch (error) {
-    console.error('Error fetching portfolio history:', error)
-    throw error
+    console.error("Error fetching portfolio history:", error);
+    throw error;
   }
 }
 
 /**
  * Calculate performance metrics from portfolio history
- * 
+ *
  * @param {Array} history - Array of {date, value} objects
  * @returns {Object} Performance metrics
  */
@@ -132,35 +132,34 @@ export function calculatePerformanceMetrics(history) {
       startValue: 0,
       absoluteChange: 0,
       percentChange: 0,
-      trend: 'neutral'
-    }
+      trend: "neutral",
+    };
   }
 
-  const startValue = history[0]?.value || 0
-  const currentValue = history[history.length - 1]?.value || 0
-  const absoluteChange = currentValue - startValue
-  const percentChange = startValue > 0 
-    ? ((absoluteChange / startValue) * 100) 
-    : 0
+  const startValue = history[0]?.value || 0;
+  const currentValue = history[history.length - 1]?.value || 0;
+  const absoluteChange = currentValue - startValue;
+  const percentChange =
+    startValue > 0 ? (absoluteChange / startValue) * 100 : 0;
 
   // Determine trend (positive, negative, neutral)
-  let trend = 'neutral'
-  if (percentChange > 0.5) trend = 'positive'
-  else if (percentChange < -0.5) trend = 'negative'
+  let trend = "neutral";
+  if (percentChange > 0.5) trend = "positive";
+  else if (percentChange < -0.5) trend = "negative";
 
   return {
     currentValue: Math.round(currentValue * 100) / 100,
     startValue: Math.round(startValue * 100) / 100,
     absoluteChange: Math.round(absoluteChange * 100) / 100,
     percentChange: Math.round(percentChange * 100) / 100,
-    trend
-  }
+    trend,
+  };
 }
 
 /**
  * Fetch history for a specific asset
  * Returns daily price snapshots for a single asset
- * 
+ *
  * @param {string} assetId - Asset ID
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Array>} Array of {date, price} objects
@@ -169,34 +168,34 @@ export async function getAssetHistory(assetId, days = 30) {
   try {
     // Build the query
     let query = supabase
-      .from('asset_history')
-      .select('date, price')
-      .eq('asset_id', assetId)
-      .order('date', { ascending: true })
+      .from("asset_history")
+      .select("date, price")
+      .eq("asset_id", assetId)
+      .order("date", { ascending: true });
 
     // If days is not 'all', filter by date
-    if (days !== 'all') {
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - days)
-      const startDateStr = startDate.toISOString().split('T')[0]
-      query = query.gte('date', startDateStr)
+    if (days !== "all") {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      const startDateStr = startDate.toISOString().split("T")[0];
+      query = query.gte("date", startDateStr);
     }
 
     // Fetch asset history for the period
-    const { data, error } = await query
+    const { data, error } = await query;
 
-    if (error) throw error
+    if (error) throw error;
 
     // Format data
-    const result = data.map(record => ({
+    const result = data.map((record) => ({
       date: record.date,
-      price: Math.round(record.price * 100) / 100
-    }))
+      price: Math.round(record.price * 100) / 100,
+    }));
 
-    return result
+    return result;
   } catch (error) {
-    console.error('Error fetching asset history:', error)
-    throw error
+    console.error("Error fetching asset history:", error);
+    throw error;
   }
 }
 
@@ -204,7 +203,7 @@ export async function getAssetHistory(assetId, days = 30) {
  * Fetch history for all user assets
  * Returns an object with asset_id as keys and history arrays as values
  * Now supports fetching ALL data (>1000 records) via pagination
- * 
+ *
  * @param {string} userId - User ID
  * @param {number|string} days - Number of days to fetch (7, 30, 90) or 'all' for all data
  * @returns {Promise<Object>} Object with assetId -> [{date, price}] mapping
@@ -212,39 +211,39 @@ export async function getAssetHistory(assetId, days = 30) {
 export async function getAllAssetsHistory(userId, days = 30) {
   try {
     // Calculate start date if needed
-    let startDateStr = null
-    if (days !== 'all') {
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - days)
-      startDateStr = startDate.toISOString().split('T')[0]
+    let startDateStr = null;
+    if (days !== "all") {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      startDateStr = startDate.toISOString().split("T")[0];
     }
 
     // Fetch ALL asset history with pagination
-    const data = await fetchAllAssetHistory(userId, startDateStr)
+    const data = await fetchAllAssetHistory(userId, startDateStr);
 
     // Group by asset_id
-    const assetHistories = {}
-    data.forEach(record => {
+    const assetHistories = {};
+    data.forEach((record) => {
       if (!assetHistories[record.asset_id]) {
-        assetHistories[record.asset_id] = []
+        assetHistories[record.asset_id] = [];
       }
       assetHistories[record.asset_id].push({
         date: record.date,
-        price: Math.round(record.price * 100) / 100
-      })
-    })
+        price: Math.round(record.price * 100) / 100,
+      });
+    });
 
-    return assetHistories
+    return assetHistories;
   } catch (error) {
-    console.error('Error fetching all assets history:', error)
-    throw error
+    console.error("Error fetching all assets history:", error);
+    throw error;
   }
 }
 
 /**
  * Calculate performance metrics for an asset
  * Includes current value based on quantity
- * 
+ *
  * @param {Array} history - Array of {date, price} objects
  * @param {Object} asset - Asset object with purchase_price, current_price, quantity
  * @returns {Object} Performance metrics
@@ -260,30 +259,32 @@ export function calculateAssetPerformance(history, asset) {
       priceChangePercent: 0,
       valueChange: 0,
       valueChangePercent: 0,
-      trend: 'neutral',
-      dataPoints: 0
-    }
+      trend: "neutral",
+      dataPoints: 0,
+    };
   }
 
-  const quantity = parseFloat(asset.quantity) || 0
-  const purchasePrice = parseFloat(asset.purchase_price) || 0
-  const currentPrice = parseFloat(asset.current_price) || purchasePrice
-  
-  const startPrice = history[0]?.price || 0
-  const endPrice = history[history.length - 1]?.price || currentPrice
-  
-  const priceChange = endPrice - startPrice
-  const priceChangePercent = startPrice > 0 ? ((priceChange / startPrice) * 100) : 0
-  
-  const currentValue = currentPrice * quantity
-  const investedValue = purchasePrice * quantity
-  const valueChange = currentValue - investedValue
-  const valueChangePercent = investedValue > 0 ? ((valueChange / investedValue) * 100) : 0
-  
+  const quantity = parseFloat(asset.quantity) || 0;
+  const purchasePrice = parseFloat(asset.purchase_price) || 0;
+  const currentPrice = parseFloat(asset.current_price) || purchasePrice;
+
+  const startPrice = history[0]?.price || 0;
+  const endPrice = history[history.length - 1]?.price || currentPrice;
+
+  const priceChange = endPrice - startPrice;
+  const priceChangePercent =
+    startPrice > 0 ? (priceChange / startPrice) * 100 : 0;
+
+  const currentValue = currentPrice * quantity;
+  const investedValue = purchasePrice * quantity;
+  const valueChange = currentValue - investedValue;
+  const valueChangePercent =
+    investedValue > 0 ? (valueChange / investedValue) * 100 : 0;
+
   // Determine trend based on price change over the period
-  let trend = 'neutral'
-  if (priceChangePercent > 0.5) trend = 'positive'
-  else if (priceChangePercent < -0.5) trend = 'negative'
+  let trend = "neutral";
+  if (priceChangePercent > 0.5) trend = "positive";
+  else if (priceChangePercent < -0.5) trend = "negative";
 
   return {
     currentPrice: Math.round(currentPrice * 100) / 100,
@@ -295,7 +296,6 @@ export function calculateAssetPerformance(history, asset) {
     valueChange: Math.round(valueChange * 100) / 100,
     valueChangePercent: Math.round(valueChangePercent * 100) / 100,
     trend,
-    dataPoints: history.length
-  }
+    dataPoints: history.length,
+  };
 }
-

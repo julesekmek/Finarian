@@ -8,40 +8,39 @@ export const CHART_PERIODS = {
   WEEK: 7,
   MONTH: 30,
   QUARTER: 90,
-  ALL: 'all' // Toutes les données depuis le début
-}
+  ALL: "all", // Toutes les données depuis le début
+};
 
-export const DEFAULT_PERIOD = CHART_PERIODS.MONTH
+export const DEFAULT_PERIOD = CHART_PERIODS.MONTH;
 
 // Currency configuration
 export const CURRENCY = {
-  CODE: 'EUR',
-  LOCALE: 'fr-FR',
-  SYMBOL: '€'
-}
+  CODE: "EUR",
+  LOCALE: "fr-FR",
+  SYMBOL: "€",
+};
 
 // Trend thresholds (percentage)
 export const TREND_THRESHOLDS = {
   POSITIVE: 0.5,
-  NEGATIVE: -0.5
-}
+  NEGATIVE: -0.5,
+};
 
 // Performance trend states
 export const TREND_STATES = {
-  POSITIVE: 'positive',
-  NEGATIVE: 'negative',
-  NEUTRAL: 'neutral'
-}
+  POSITIVE: "positive",
+  NEGATIVE: "negative",
+  NEUTRAL: "neutral",
+};
 
 // Realtime channel names
 export const REALTIME_CHANNELS = {
-  ASSETS: 'realtime:assets',
-  ASSET_HISTORY: 'realtime:asset_history'
-}
+  ASSETS: "realtime:assets",
+  ASSET_HISTORY: "realtime:asset_history",
+};
 
 // Notification duration (ms)
-export const NOTIFICATION_DURATION = 5000
+export const NOTIFICATION_DURATION = 5000;
 
 // API rate limiting (ms)
-export const API_DELAY = 100
-
+export const API_DELAY = 100;

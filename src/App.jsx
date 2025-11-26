@@ -6,17 +6,17 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { supabase } from "./lib/supabaseClient";
-import Auth from "./components/Auth";
-import Sidebar from "./components/Sidebar";
-import BottomNavigation from "./components/BottomNavigation";
-import PortfolioChart from "./components/PortfolioChart";
-import AddAssetForm from "./components/AddAssetForm";
-import Performance from "./components/Performance";
-import CategoryEvolution from "./components/CategoryEvolution";
-import CategoryPieChart from "./components/CategoryPieChart";
-import CategoryDetail from "./components/CategoryDetail";
-import { REALTIME_CHANNELS } from "./lib/utils/constants";
+import { authService } from "@/services/authService";
+import { assetService } from "@/services/assetService";
+import Auth from "@/components/Auth";
+import Sidebar from "@/components/Sidebar";
+import BottomNavigation from "@/components/BottomNavigation";
+import PortfolioChart from "@/components/PortfolioChart";
+import AddAssetForm from "@/components/AddAssetForm";
+import Performance from "@/components/Performance";
+import CategoryEvolution from "@/components/CategoryEvolution";
+import CategoryPieChart from "@/components/CategoryPieChart";
+import CategoryDetail from "@/components/CategoryDetail";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -27,14 +27,14 @@ export default function App() {
 
   // Monitor auth state changes
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    authService.getSession().then((session) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = authService.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
@@ -49,13 +49,8 @@ export default function App() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("assets")
-        .select("*")
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-      setAssets(data || []);
+      const data = await assetService.fetchAssets(user.id);
+      setAssets(data);
     } catch (error) {
       console.error("Error fetching assets:", error);
     }
@@ -70,24 +65,12 @@ export default function App() {
 
     fetchAssets();
 
-    const channel = supabase
-      .channel(`${REALTIME_CHANNELS.ASSETS}-header`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "assets",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchAssets();
-        }
-      )
-      .subscribe();
+    const channel = assetService.subscribeToAssets(user.id, () => {
+      fetchAssets();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      assetService.removeChannel(channel);
     };
   }, [user]);
 
@@ -109,8 +92,11 @@ export default function App() {
 
   // Handle sign out
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error signing out:", error);
+    try {
+      await authService.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   // Loading state with modern spinner
