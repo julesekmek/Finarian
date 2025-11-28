@@ -4,7 +4,13 @@
  */
 
 import { motion } from "framer-motion";
-import { LayoutDashboard, FolderKanban, BarChart3, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  FolderKanban,
+  BarChart3,
+  LogOut,
+  Sparkles,
+} from "lucide-react";
 
 export default function BottomNavigation({
   currentPage,
@@ -15,6 +21,7 @@ export default function BottomNavigation({
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "categories", label: "Catégories", icon: FolderKanban },
     { id: "performance", label: "Performance", icon: BarChart3 },
+    { id: "ai-recommendation", label: "IA", icon: Sparkles },
     { id: "logout", label: "Déconnexion", icon: LogOut, action: onSignOut },
   ];
 

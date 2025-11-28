@@ -11,6 +11,7 @@ import {
   TrendingUp,
   LogOut,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { authService } from "../services/authService";
@@ -52,6 +53,7 @@ export default function Sidebar({
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "categories", label: "Catégories", icon: FolderKanban },
     { id: "performance", label: "Performance", icon: BarChart3 },
+    { id: "ai-recommendation", label: "Recommandation IA", icon: Sparkles },
     {
       id: "update",
       label: "Actualiser les prix",

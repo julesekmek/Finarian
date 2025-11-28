@@ -17,6 +17,7 @@ import Performance from "@/components/Performance";
 import CategoryEvolution from "@/components/CategoryEvolution";
 import CategoryPieChart from "@/components/CategoryPieChart";
 import CategoryDetail from "@/components/CategoryDetail";
+import AIRecommendation from "@/components/AIRecommendation";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -212,6 +213,19 @@ export default function App() {
                   transition={{ duration: 0.3 }}
                 >
                   <Performance userId={user.id} assets={assets} />
+                </motion.div>
+              )}
+
+              {/* AI Recommendation Page */}
+              {currentPage === "ai-recommendation" && (
+                <motion.div
+                  key="ai-recommendation"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AIRecommendation userId={user.id} />
                 </motion.div>
               )}
             </AnimatePresence>

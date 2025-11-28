@@ -44,3 +44,24 @@ export const NOTIFICATION_DURATION = 5000;
 
 // API rate limiting (ms)
 export const API_DELAY = 100;
+
+// Investment Objectives
+export const INVESTMENT_OBJECTIVES = [
+  { id: "growth", label: "Croissance du capital" },
+  { id: "passive_income", label: "Revenus passifs" },
+  { id: "preservation", label: "Préservation du capital" },
+  { id: "diversification", label: "Diversification" },
+  { id: "speculation", label: "Spéculation / Haut rendement" },
+];
+
+// Investment Horizons
+export const INVESTMENT_HORIZONS = [
+  { id: "short", label: "Court terme (< 2 ans)" },
+  { id: "medium", label: "Moyen terme (2-5 ans)" },
+  { id: "long", label: "Long terme (> 5 ans)" },
+  { id: "retirement", label: "Retraite" },
+];
+
+// Investment Defaults
+export const DEFAULT_MONTHLY_INVESTMENT = 500;
+export const MAX_MONTHLY_INVESTMENT = 2500;
