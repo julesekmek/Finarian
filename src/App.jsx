@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { authService } from "@/services/authService";
 import { assetService } from "@/services/assetService";
 import Auth from "@/components/Auth";
@@ -167,6 +167,17 @@ export default function App() {
 
                   {/* Floating Add Button */}
                   <AddAssetForm userId={user.id} />
+
+                  {/* Logout Button - Mobile Only */}
+                  <div className="md:hidden pt-4 pb-2">
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 font-medium hover:bg-red-500/20 transition-colors"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Se déconnecter
+                    </button>
+                  </div>
                 </motion.div>
               )}
 

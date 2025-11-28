@@ -52,8 +52,8 @@ export default function Sidebar({
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "categories", label: "Catégories", icon: FolderKanban },
-    { id: "performance", label: "Performance", icon: BarChart3 },
     { id: "ai-recommendation", label: "Recommandation IA", icon: Sparkles },
+    { id: "performance", label: "Performance", icon: BarChart3 },
     {
       id: "update",
       label: "Actualiser les prix",

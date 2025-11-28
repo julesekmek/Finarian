@@ -109,7 +109,7 @@ export default function AIRecommendation({ userId }) {
   );
 
   return (
-    <div className="space-y-6 pb-40 md:pb-24">
+    <div className="space-y-6 pb-6 md:pb-40">
       {/* Intro Block */}
       <div className="card">
         <h2 className="text-xl font-semibold text-text-primary mb-3 flex items-center gap-2">
@@ -305,36 +305,55 @@ export default function AIRecommendation({ userId }) {
         )}
       </div>
 
-      {/* Action Button - Fixed Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-60 bg-dark-bg/95 backdrop-blur-md border-t border-border-subtle z-50 px-4 md:px-8 py-4 md:py-6 safe-area-bottom">
-        <div className="max-w-7xl mx-auto w-full">
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full btn-primary py-4 text-lg shadow-lg shadow-accent-primary/20 flex flex-col items-center gap-1"
-          >
-            <div className="flex items-center gap-2">
-              {showCopied ? (
-                <Check className="w-6 h-6" />
-              ) : (
-                <Sparkles className="w-6 h-6" />
-              )}
-              <span>
-                {showCopied ? "Copié !" : "Obtenir ma recommandation IA"}
-              </span>
-            </div>
-          </motion.button>
+      {/* Action Button - Different for Mobile vs Desktop */}
 
-          {/* Enhanced Explanation */}
-          <div className="mt-3 text-center space-y-1">
+      {/* Mobile Version - Card in Flow */}
+      <div className="md:hidden card">
+        <p className="text-sm text-accent-beige mb-4 text-center leading-relaxed">
+          Génère un prompt anonymisé, le copie et ouvre ChatGPT. Collez-le pour
+          obtenir votre analyse.
+        </p>
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="w-full btn-primary py-4 text-lg shadow-lg shadow-accent-primary/20"
+        >
+          {showCopied ? "Copié !" : "Obtenir ma reco IA"}
+        </motion.button>
+      </div>
+
+      {/* Desktop Version - Fixed Bottom */}
+      <div className="hidden md:block fixed bottom-0 left-60 right-0 bg-dark-bg/95 backdrop-blur-md border-t border-border-subtle z-50 px-8 py-6">
+        <div className="max-w-7xl mx-auto w-full">
+          {/* Explanation - Above Button */}
+          <div className="mb-3 text-center">
             <p className="text-xs text-text-muted max-w-2xl mx-auto">
               Cette action va générer un prompt optimisé contenant vos données
               anonymisées, le copier dans votre presse-papier et ouvrir ChatGPT.
               Il vous suffira de coller le texte pour obtenir votre analyse.
             </p>
           </div>
+
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="w-full btn-primary py-4 text-lg shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2"
+          >
+            {showCopied ? (
+              <>
+                <Check className="w-6 h-6" />
+                Copié !
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-6 h-6" />
+                Obtenir ma recommandation IA
+              </>
+            )}
+          </motion.button>
         </div>
       </div>
     </div>

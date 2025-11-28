@@ -20,9 +20,8 @@ export default function BottomNavigation({
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "categories", label: "Catégories", icon: FolderKanban },
-    { id: "performance", label: "Performance", icon: BarChart3 },
     { id: "ai-recommendation", label: "IA", icon: Sparkles },
-    { id: "logout", label: "Déconnexion", icon: LogOut, action: onSignOut },
+    { id: "performance", label: "Performance", icon: BarChart3 },
   ];
 
   const handleNavClick = (item) => {
