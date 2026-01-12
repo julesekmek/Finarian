@@ -48,9 +48,12 @@ export const symbolSearchService = {
       } else {
         // Production: Use Supabase client
         const { data, error } = await supabase.functions.invoke(
-          `search-symbols?q=${encodeURIComponent(query.trim())}`,
+          "search-symbols",
           {
             method: "GET",
+            queryParams: {
+              q: query.trim(),
+            },
           }
         );
 
