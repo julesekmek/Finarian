@@ -33,36 +33,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify authentication
+    // Verify authentication (optional for search)
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (authHeader) {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
       );
-    }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-
-    // Note: In a hybrid dev environment (Prod Frontend + Local Function), 
-    // getUser() might fail because the local function uses local auth keys 
-    // but receives a prod token. For this specific "search" feature which 
-    // uses public data (Yahoo Finance), we can be lenient for testing.
-    if (authError || !user) {
-      console.warn('Auth verification failed (likely due to hybrid dev env), proceeding anyway for search:', authError);
-      // In strict production, you would uncomment the following:
-      /*
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-      */
+      if (authError || !user) {
+        console.warn('Auth verification failed (likely due to hybrid dev env), proceeding anyway for search:', authError);
+      } else {
+        console.log(`Authenticated user searching: ${user.id}`);
+      }
+    } else {
+      console.log('Unauthenticated search request received');
     }
 
 

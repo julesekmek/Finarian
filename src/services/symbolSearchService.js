@@ -32,7 +32,8 @@ export const symbolSearchService = {
         const response = await fetch(functionUrl, {
           method: "GET",
           headers: {
-            Authorization: token ? `Bearer ${token}` : "",
+            apikey: import.meta.env.VITE_SUPABASE_KEY,
+            ...(token && { Authorization: `Bearer ${token}` }),
             "Content-Type": "application/json",
           },
         });
