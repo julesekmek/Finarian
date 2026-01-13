@@ -21,8 +21,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Only allow GET requests
-    if (req.method !== 'GET') {
+    // Allow GET and POST requests
+    if (req.method !== 'GET' && req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
         { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -60,12 +60,12 @@ Deno.serve(async (req) => {
         const body = await req.json();
         query = body.q || body.query;
       } catch (e) {
-        // Ignore JSON parse errors
+        console.warn('Failed to parse JSON body for query:', e);
       }
     }
 
     if (!query) {
-      console.error('Missing query parameter "q"');
+      console.warn('Missing query parameter "q" or "query" in request');
       return new Response(
         JSON.stringify({ error: 'Missing query parameter "q"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

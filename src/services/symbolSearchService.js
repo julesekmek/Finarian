@@ -47,11 +47,12 @@ export const symbolSearchService = {
         return result.results || [];
       } else {
         // Production: Use Supabase client
+        // Using POST with body is more reliable for passing parameters to Edge Functions
         const { data, error } = await supabase.functions.invoke(
           "search-symbols",
           {
-            method: "GET",
-            queryParams: {
+            method: "POST",
+            body: {
               q: query.trim(),
             },
           }
