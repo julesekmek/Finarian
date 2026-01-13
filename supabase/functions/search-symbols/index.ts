@@ -50,11 +50,22 @@ Deno.serve(async (req) => {
     }
 
 
-    // Extract query parameter
+    // Extract query parameter from URL or Body
     const url = new URL(req.url);
-    const query = url.searchParams.get('q');
+    let query = url.searchParams.get('q');
+    
+    // If not in URL, try to parse from body if it's a POST/POST-like request
+    if (!query && req.headers.get('content-type')?.includes('application/json')) {
+      try {
+        const body = await req.json();
+        query = body.q || body.query;
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    }
 
     if (!query) {
+      console.error('Missing query parameter "q"');
       return new Response(
         JSON.stringify({ error: 'Missing query parameter "q"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
