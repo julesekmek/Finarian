@@ -10,9 +10,16 @@ import { X, Save, Loader2 } from "lucide-react";
 import { assetService } from "../services/assetService";
 import { authService } from "../services/authService";
 import { backfillHistory } from "../services/priceService";
-import YahooFinanceAutocomplete from "./YahooFinanceAutocomplete";
 
-export default function EditAssetModal({ asset, onClose, onSave }) {
+import YahooFinanceAutocomplete from "./YahooFinanceAutocomplete";
+import AutocompleteInput from "./AutocompleteInput";
+
+export default function EditAssetModal({
+  asset,
+  existingAssets = [],
+  onClose,
+  onSave,
+}) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -23,6 +30,17 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
   const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Derive unique categories, regions, and sectors from existing assets
+  const existingCategories = [
+    ...new Set(existingAssets.map((a) => a.category).filter(Boolean)),
+  ].sort();
+  const existingRegions = [
+    ...new Set(existingAssets.map((a) => a.region).filter(Boolean)),
+  ].sort();
+  const existingSectors = [
+    ...new Set(existingAssets.map((a) => a.sector).filter(Boolean)),
+  ].sort();
 
   // Pre-fill form with asset data
   useEffect(() => {
@@ -118,7 +136,7 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
       // 🎯 Backfill historical data (YTD from 2025-01-02)
       // This updates the entire YTD history with new values
       console.log(
-        `Backfilling YTD historical data for ${updatedAsset.name}...`
+        `Backfilling YTD historical data for ${updatedAsset.name}...`,
       );
 
       const session = await authService.getSession();
@@ -129,12 +147,12 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
             asset.id,
             symbol.trim(),
             numericCurrentPrice,
-            session
+            session,
           );
 
           if (result.success) {
             console.log(
-              `✓ Historical data backfilled: ${result.inserted} points (${result.source})`
+              `✓ Historical data backfilled: ${result.inserted} points (${result.source})`,
             );
           } else {
             console.warn("Historical data backfill failed:", result.message);
@@ -223,12 +241,11 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   Catégorie
                 </label>
-                <input
-                  type="text"
+                <AutocompleteInput
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={setCategory}
+                  options={existingCategories}
                   placeholder="ex: Actions, Crypto, Immobilier"
-                  className="input-field w-full"
                   disabled={loading}
                 />
               </div>
@@ -253,12 +270,11 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
                   <label className="block text-sm font-medium text-text-secondary mb-2">
                     Zone géographique
                   </label>
-                  <input
-                    type="text"
+                  <AutocompleteInput
                     value={region}
-                    onChange={(e) => setRegion(e.target.value)}
+                    onChange={setRegion}
+                    options={existingRegions}
                     placeholder="ex: Europe, US"
-                    className="input-field w-full"
                     disabled={loading}
                   />
                 </div>
@@ -266,12 +282,11 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
                   <label className="block text-sm font-medium text-text-secondary mb-2">
                     Domaine d'activité
                   </label>
-                  <input
-                    type="text"
+                  <AutocompleteInput
                     value={sector}
-                    onChange={(e) => setSector(e.target.value)}
+                    onChange={setSector}
+                    options={existingSectors}
                     placeholder="ex: Tech, Santé"
-                    className="input-field w-full"
                     disabled={loading}
                   />
                 </div>
@@ -364,6 +379,6 @@ export default function EditAssetModal({ asset, onClose, onSave }) {
         </div>
       </div>
     </>,
-    document.body
+    document.body,
   );
 }

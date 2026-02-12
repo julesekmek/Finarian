@@ -166,7 +166,7 @@ export default function App() {
                   />
 
                   {/* Floating Add Button */}
-                  <AddAssetForm userId={user.id} />
+                  <AddAssetForm userId={user.id} assets={assets} />
 
                   {/* Logout Button - Mobile Only */}
                   <div className="md:hidden pt-4 pb-2">

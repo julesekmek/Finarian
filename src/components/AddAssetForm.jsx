@@ -9,10 +9,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Loader2 } from "lucide-react";
 import { assetService } from "../services/assetService";
 import { authService } from "../services/authService";
-import { backfillHistory } from "../services/priceService";
-import YahooFinanceAutocomplete from "./YahooFinanceAutocomplete";
+import { backfillHistory, callUpdatePrices } from "../services/priceService";
 
-export default function AddAssetForm({ userId }) {
+import YahooFinanceAutocomplete from "./YahooFinanceAutocomplete";
+import AutocompleteInput from "./AutocompleteInput";
+
+export default function AddAssetForm({ userId, assets = [] }) {
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -24,6 +26,17 @@ export default function AddAssetForm({ userId }) {
   const [sector, setSector] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Derive unique categories, regions, and sectors from existing assets
+  const existingCategories = [
+    ...new Set(assets.map((a) => a.category).filter(Boolean)),
+  ].sort();
+  const existingRegions = [
+    ...new Set(assets.map((a) => a.region).filter(Boolean)),
+  ].sort();
+  const existingSectors = [
+    ...new Set(assets.map((a) => a.sector).filter(Boolean)),
+  ].sort();
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -98,12 +111,12 @@ export default function AddAssetForm({ userId }) {
               newAsset.id,
               symbol.trim(),
               numericCurrentPrice,
-              session
+              session,
             );
 
             if (result.success) {
               console.log(
-                `✓ Historical data backfilled: ${result.inserted} points (${result.source})`
+                `✓ Historical data backfilled: ${result.inserted} points (${result.source})`,
               );
             } else {
               console.warn("Historical data backfill failed:", result.message);
@@ -114,6 +127,10 @@ export default function AddAssetForm({ userId }) {
           }
         }
       }
+
+      // Force update of daily history to avoid chart dip
+      console.log("Updating daily prices and history...");
+      await callUpdatePrices();
 
       // Reset form and close modal
       setName("");
@@ -137,6 +154,14 @@ export default function AddAssetForm({ userId }) {
     if (!loading) {
       setShowModal(false);
       setError("");
+      setName("");
+      setCategory("");
+      setSymbol("");
+      setQuantity("");
+      setPurchasePrice("");
+      setCurrentPrice("");
+      setRegion("");
+      setSector("");
     }
   };
 
@@ -216,12 +241,11 @@ export default function AddAssetForm({ userId }) {
                         <label className="block text-sm font-medium text-text-secondary mb-2">
                           Catégorie <span className="text-accent-red">*</span>
                         </label>
-                        <input
-                          type="text"
+                        <AutocompleteInput
                           value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          placeholder="ex: Cash, Actions, Immobilier"
-                          className="input-field w-full"
+                          onChange={setCategory}
+                          options={existingCategories}
+                          placeholder="ex: Actions, Crypto, Immobilier"
                           disabled={loading}
                         />
                       </div>
@@ -243,7 +267,7 @@ export default function AddAssetForm({ userId }) {
                               setName(
                                 result.shortName ||
                                   result.longName ||
-                                  result.symbol
+                                  result.symbol,
                               );
                             }
                           }}
@@ -261,12 +285,11 @@ export default function AddAssetForm({ userId }) {
                           <label className="block text-sm font-medium text-text-secondary mb-2">
                             Zone géographique
                           </label>
-                          <input
-                            type="text"
+                          <AutocompleteInput
                             value={region}
-                            onChange={(e) => setRegion(e.target.value)}
+                            onChange={setRegion}
+                            options={existingRegions}
                             placeholder="ex: Europe, US"
-                            className="input-field w-full"
                             disabled={loading}
                           />
                         </div>
@@ -274,12 +297,11 @@ export default function AddAssetForm({ userId }) {
                           <label className="block text-sm font-medium text-text-secondary mb-2">
                             Domaine d'activité
                           </label>
-                          <input
-                            type="text"
+                          <AutocompleteInput
                             value={sector}
-                            onChange={(e) => setSector(e.target.value)}
+                            onChange={setSector}
+                            options={existingSectors}
                             placeholder="ex: Tech, Santé"
-                            className="input-field w-full"
                             disabled={loading}
                           />
                         </div>
@@ -373,7 +395,7 @@ export default function AddAssetForm({ userId }) {
             </>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
     </>
   );

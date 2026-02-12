@@ -5,9 +5,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, TrendingDown, Edit, Trash2, Wallet } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Edit,
+  Trash2,
+  Wallet,
+  Plus,
+} from "lucide-react";
 import { assetService } from "../services/assetService";
 import EditAssetModal from "./EditAssetModal";
+import AddPurchaseModal from "./AddPurchaseModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import { calculateAssetMetrics } from "../utils/calculations";
@@ -18,6 +26,7 @@ export default function AssetList({ userId }) {
   const [loading, setLoading] = useState(true);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddPurchaseModal, setShowAddPurchaseModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Fetch assets from Supabase
@@ -45,13 +54,13 @@ export default function AssetList({ userId }) {
         if (payload.new.user_id === userId) {
           setAssets((prev) =>
             prev.map((asset) =>
-              asset.id === payload.new.id ? payload.new : asset
-            )
+              asset.id === payload.new.id ? payload.new : asset,
+            ),
           );
         }
       } else if (payload.eventType === "DELETE") {
         setAssets((prev) =>
-          prev.filter((asset) => asset.id !== payload.old.id)
+          prev.filter((asset) => asset.id !== payload.old.id),
         );
       }
     });
@@ -74,8 +83,26 @@ export default function AssetList({ userId }) {
   const handleSaveEdit = (updatedAsset) => {
     setAssets((prevAssets) =>
       prevAssets.map((asset) =>
-        asset.id === updatedAsset.id ? updatedAsset : asset
-      )
+        asset.id === updatedAsset.id ? updatedAsset : asset,
+      ),
+    );
+  };
+
+  const handleOpenAddPurchase = (asset) => {
+    setSelectedAsset(asset);
+    setShowAddPurchaseModal(true);
+  };
+
+  const handleCloseAddPurchase = () => {
+    setShowAddPurchaseModal(false);
+    setSelectedAsset(null);
+  };
+
+  const handleSaveAddPurchase = (updatedAsset) => {
+    setAssets((prevAssets) =>
+      prevAssets.map((asset) =>
+        asset.id === updatedAsset.id ? updatedAsset : asset,
+      ),
     );
   };
 
@@ -91,7 +118,7 @@ export default function AssetList({ userId }) {
 
   const handleConfirmDelete = (assetId) => {
     setAssets((prevAssets) =>
-      prevAssets.filter((asset) => asset.id !== assetId)
+      prevAssets.filter((asset) => asset.id !== assetId),
     );
   };
 
@@ -181,13 +208,20 @@ export default function AssetList({ userId }) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => handleOpenEdit(asset)}
                         className="p-2 bg-dark-hover hover:bg-accent-blue/20 text-accent-blue rounded-xl transition-all"
                         title="Modifier"
                       >
                         <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenAddPurchase(asset)}
+                        className="p-2 bg-dark-hover hover:bg-accent-green/20 text-accent-green rounded-xl transition-all"
+                        title="Ajouter un achat"
+                      >
+                        <Plus className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleOpenDelete(asset)}
@@ -284,6 +318,14 @@ export default function AssetList({ userId }) {
           asset={selectedAsset}
           onClose={handleCloseEdit}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {showAddPurchaseModal && selectedAsset && (
+        <AddPurchaseModal
+          asset={selectedAsset}
+          onClose={handleCloseAddPurchase}
+          onSave={handleSaveAddPurchase}
         />
       )}
 

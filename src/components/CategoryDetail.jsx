@@ -10,6 +10,7 @@ import {
   Search,
   ArrowUpDown,
   PieChart as PieChartIcon,
+  Plus,
 } from "lucide-react";
 import {
   PieChart,
@@ -26,8 +27,9 @@ import {
 } from "../utils/calculations";
 import { assetService } from "../services/assetService";
 import { authService } from "../services/authService";
-import { getLiveQuotes } from "../services/priceService";
+import { getLiveQuotes, callUpdatePrices } from "../services/priceService";
 import EditAssetModal from "./EditAssetModal";
+import AddPurchaseModal from "./AddPurchaseModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 // Colors for pie chart
@@ -115,6 +117,7 @@ const SavingsYieldControl = ({ asset }) => {
 export default function CategoryDetail({ categoryName, assets, onBack }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddPurchaseModal, setShowAddPurchaseModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("value");
@@ -124,7 +127,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
   // Filter assets for this category
   const categoryAssets = useMemo(
     () => assets.filter((asset) => asset.category === categoryName),
-    [assets, categoryName]
+    [assets, categoryName],
   );
 
   // Fetch live quotes for assets with symbols
@@ -178,7 +181,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
         const now = new Date();
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const daysElapsed = Math.floor(
-          (now - startOfYear) / (1000 * 60 * 60 * 24)
+          (now - startOfYear) / (1000 * 60 * 60 * 24),
         );
         return sum + annualYield * (daysElapsed / 365);
       }, 0)
@@ -268,9 +271,26 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
     setSelectedAsset(null);
   };
 
-  const handleSaveEdit = () => {
-    // No need to manually update - realtime subscription in App.jsx will handle it
+  const handleSaveEdit = async () => {
+    // Force update of daily history to avoid chart dip
+    await callUpdatePrices();
     handleCloseEdit();
+  };
+
+  const handleOpenAddPurchase = (asset) => {
+    setSelectedAsset(asset);
+    setShowAddPurchaseModal(true);
+  };
+
+  const handleCloseAddPurchase = () => {
+    setShowAddPurchaseModal(false);
+    setSelectedAsset(null);
+  };
+
+  const handleSaveAddPurchase = async () => {
+    // Force update of daily history to avoid chart dip
+    await callUpdatePrices();
+    handleCloseAddPurchase();
   };
 
   const handleOpenDelete = (asset) => {
@@ -691,13 +711,20 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                     </div>
                   </div>
                   {/* Action Buttons */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="hidden md:flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleOpenEdit(asset)}
                       className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
                       title="Modifier l'actif"
                     >
                       <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenAddPurchase(asset)}
+                      className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+                      title="Ajouter un achat"
+                    >
+                      <Plus className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleOpenDelete(asset)}
@@ -751,7 +778,7 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
                                 ? "+"
                                 : ""}
                               {liveQuotes[asset.symbol].changePercent.toFixed(
-                                2
+                                2,
                               )}
                               % (24h)
                             </span>
@@ -816,6 +843,31 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
 
                 {/* Savings Yield Control - Only for manual assets (no symbol) */}
                 {!asset.symbol && <SavingsYieldControl asset={asset} />}
+
+                {/* Mobile Action Buttons Footer */}
+                <div className="flex md:hidden justify-end gap-2 mt-4 pt-4 border-t border-border-subtle">
+                  <button
+                    onClick={() => handleOpenEdit(asset)}
+                    className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+                    title="Modifier l'actif"
+                  >
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleOpenAddPurchase(asset)}
+                    className="p-2 bg-dark-hover hover:bg-border-default text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+                    title="Ajouter un achat"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleOpenDelete(asset)}
+                    className="p-2 bg-dark-hover hover:bg-border-default text-accent-red rounded-lg transition-colors"
+                    title="Supprimer l'actif"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </motion.div>
             );
           })}
@@ -838,8 +890,17 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
       {showEditModal && selectedAsset && (
         <EditAssetModal
           asset={selectedAsset}
+          existingAssets={assets}
           onClose={handleCloseEdit}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {showAddPurchaseModal && selectedAsset && (
+        <AddPurchaseModal
+          asset={selectedAsset}
+          onClose={handleCloseAddPurchase}
+          onSave={handleSaveAddPurchase}
         />
       )}
 
