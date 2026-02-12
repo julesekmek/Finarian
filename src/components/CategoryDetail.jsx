@@ -357,11 +357,6 @@ export default function CategoryDetail({ categoryName, assets, onBack }) {
               Variation
             </p>
             <div className="flex items-center gap-1">
-              {isPositive ? (
-                <TrendingUp className="w-4 h-4 text-accent-green" />
-              ) : (
-                <TrendingDown className="w-4 h-4 text-accent-red" />
-              )}
               <p
                 className={`text-xl font-bold ${
                   isPositive ? "text-accent-green" : "text-accent-red"
