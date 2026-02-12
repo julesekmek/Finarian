@@ -14,7 +14,7 @@ import { formatCurrency } from "../utils/formatters";
 
 export default function AddPurchaseModal({ asset, onClose, onSave }) {
   const [quantityToAdd, setQuantityToAdd] = useState("");
-  const [purchasePrice, setPurchasePrice] = useState("");
+  const [totalAmount, setTotalAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [newMetrics, setNewMetrics] = useState(null);
@@ -42,28 +42,32 @@ export default function AddPurchaseModal({ asset, onClose, onSave }) {
   // Calculate projected metrics when inputs change
   useEffect(() => {
     const qty = parseFloat(quantityToAdd);
-    const price = parseFloat(purchasePrice);
+    const amount = parseFloat(totalAmount);
 
-    if (!isNaN(qty) && qty > 0 && !isNaN(price) && price >= 0) {
+    if (!isNaN(qty) && qty > 0 && !isNaN(amount) && amount >= 0) {
       const currentQty = asset.quantity || 0;
       const currentPRU = asset.purchase_price || 0;
 
       const newTotalQty = currentQty + qty;
 
-      // Weigthed Average Price Formula:
-      // ((Old Qty * Old Price) + (New Qty * New Price)) / New Total Qty
-      const totalCost = currentQty * currentPRU + qty * price;
+      // Calculate unit price from total amount
+      const unitPrice = amount / qty;
+
+      // Weighted Average Price Formula:
+      // ((Old Qty * Old Price) + Total Amount) / New Total Qty
+      const totalCost = currentQty * currentPRU + amount;
       const newPRU = totalCost / newTotalQty;
 
       setNewMetrics({
         totalQuantity: newTotalQty,
         newPRU: newPRU,
         totalInvested: totalCost,
+        unitPrice: unitPrice,
       });
     } else {
       setNewMetrics(null);
     }
-  }, [quantityToAdd, purchasePrice, asset]);
+  }, [quantityToAdd, totalAmount, asset]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,13 +189,13 @@ export default function AddPurchaseModal({ asset, onClose, onSave }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Prix d'achat unitaire (€)
+                    Montant investi (€)
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    value={totalAmount}
+                    onChange={(e) => setTotalAmount(e.target.value)}
                     placeholder="0.00"
                     className="input-field w-full"
                     disabled={loading}
@@ -204,6 +208,15 @@ export default function AddPurchaseModal({ asset, onClose, onSave }) {
                 <h3 className="text-sm font-semibold text-text-primary mb-2">
                   Nouvelle situation simulée
                 </h3>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-text-muted">
+                    Prix unitaire de cet achat
+                  </span>
+                  <span className="text-text-primary font-semibold">
+                    {newMetrics ? formatCurrency(newMetrics.unitPrice) : "-"}
+                  </span>
+                </div>
 
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-text-muted">
@@ -231,20 +244,6 @@ export default function AddPurchaseModal({ asset, onClose, onSave }) {
                       {newMetrics ? formatCurrency(newMetrics.newPRU) : "-"}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex justify-between items-center text-sm pt-2 border-t border-border-subtle/50">
-                  <span className="text-text-muted">
-                    Investissement total ajouté
-                  </span>
-                  <span className="text-text-primary font-semibold">
-                    {newMetrics
-                      ? formatCurrency(
-                          newMetrics.totalInvested -
-                            asset.quantity * asset.purchase_price,
-                        )
-                      : "-"}
-                  </span>
                 </div>
               </div>
 
