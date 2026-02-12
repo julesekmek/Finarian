@@ -184,7 +184,6 @@ export default function AddPurchaseModal({ asset, onClose, onSave }) {
                     placeholder="0.00"
                     className="input-field w-full"
                     disabled={loading}
-                    autoFocus
                   />
                 </div>
                 <div>
