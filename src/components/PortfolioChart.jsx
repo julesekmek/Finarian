@@ -94,7 +94,7 @@ export default function PortfolioChart({ userId }) {
         },
         () => {
           fetchTotalInvested();
-        }
+        },
       )
       .subscribe();
 
@@ -298,8 +298,8 @@ export default function PortfolioChart({ userId }) {
             {isRefreshing
               ? "Actualisation..."
               : pullDistance >= pullThreshold
-              ? "Relâcher pour actualiser"
-              : "Tirer pour actualiser"}
+                ? "Relâcher pour actualiser"
+                : "Tirer pour actualiser"}
           </span>
         </motion.div>
       )}
@@ -358,11 +358,6 @@ export default function PortfolioChart({ userId }) {
                 Variation
               </p>
               <div className="flex items-center gap-1">
-                {kpiMetrics.currentValue - totalInvested >= 0 ? (
-                  <TrendingUp className="w-4 h-4 text-accent-green" />
-                ) : (
-                  <TrendingDown className="w-4 h-4 text-accent-red" />
-                )}
                 <p
                   className={`text-xl font-bold ${
                     kpiMetrics.currentValue - totalInvested >= 0
